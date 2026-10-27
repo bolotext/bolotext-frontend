@@ -1,12 +1,9 @@
 import { agentsApi } from '@/api/endpoints'
 import { useProviders } from '@/api/queries'
-import type { VoicePersonaSection } from '@/api/types'
-import { Card, CardBody, CardHeader, ErrorState, Segmented, Slider, ToggleRow } from '@/components/ui/primitives'
+import { Card, CardBody, CardHeader, ErrorState, Slider, ToggleRow } from '@/components/ui/primitives'
 import { Input } from '@/components/ui/input'
 import { ProviderPicker } from './ProviderPicker'
 import { SaveBar, SectionTitle, SettingRow, useBuilder, useDraft, useSave } from './context'
-
-type Gender = NonNullable<VoicePersonaSection['gender']> | 'unset'
 
 export default function VoiceTab() {
   const { agent, readOnly } = useBuilder()
@@ -31,7 +28,7 @@ export default function VoiceTab() {
                 modelId={draft.model_id}
                 onChange={(provider_id, model_id) => patch({ provider_id, model_id })}
                 voiceId={draft.voice_id}
-                onVoiceChange={(voice_id) => patch({ voice_id })}
+                onVoiceChange={(voice_id, gender) => patch({ voice_id, gender: gender === 'male' || gender === 'female' ? gender : null })}
                 disabled={readOnly}
                 modelNoun="Model"
                 agentLanguages={agent.languages}
@@ -43,19 +40,6 @@ export default function VoiceTab() {
         <Card>
           <CardHeader title="Persona" />
           <CardBody className="divide-y divide-line">
-            <SettingRow title="Gender" description="Helps pick and filter voices.">
-              <Segmented<Gender>
-                value={draft.gender ?? 'unset'}
-                onChange={(g) => patch({ gender: g === 'unset' ? null : g })}
-                disabled={readOnly}
-                options={[
-                  { value: 'unset', label: 'Unset' },
-                  { value: 'female', label: 'Female' },
-                  { value: 'male', label: 'Male' },
-                  { value: 'neutral', label: 'Neutral' },
-                ]}
-              />
-            </SettingRow>
             <SettingRow title="Speaking rate" description="1.0× is the provider’s normal pace.">
               <Slider
                 min={0.5}

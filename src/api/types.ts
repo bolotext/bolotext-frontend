@@ -347,6 +347,14 @@ export interface LanguageOption {
   code: string
 }
 
+export interface VoiceOption {
+  voice_id: string
+  label: string
+  gender: string | null
+  language: string | null
+  accent?: string | null
+}
+
 export interface ModelInfo {
   model_id: string
   label: string
@@ -355,6 +363,7 @@ export interface ModelInfo {
   function_calling: boolean
   supported_languages: LanguageOption[]
   voice_ids: string[]
+  voices?: VoiceOption[]
 }
 
 export interface ProviderInfo {
@@ -369,4 +378,21 @@ export interface ProviderCatalog {
   llm: ProviderInfo[]
   stt: ProviderInfo[]
   tts: ProviderInfo[]
+}
+
+// ---------- API tokens (Super Admin) ----------
+export interface ApiTokenOut {
+  id: string
+  name: string
+  token_prefix: string
+  scopes: string[]
+  created_by: string
+  created_at: string
+  revoked: boolean
+  revoked_at: string | null
+}
+
+export interface ApiTokenCreated extends ApiTokenOut {
+  /** The full token — returned only by the create call, never again. */
+  token: string
 }

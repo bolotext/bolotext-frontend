@@ -67,6 +67,7 @@ export interface Abilities {
   // Navigation
   viewUsers: boolean
   viewOrganizations: boolean
+  manageApiTokens: boolean
 }
 
 export function abilitiesFor(role: Role | null): Abilities {
@@ -85,5 +86,7 @@ export function abilitiesFor(role: Role | null): Abilities {
     // GET /users rejects QA regardless of permission.
     viewUsers: can('user.view') && !isQA,
     viewOrganizations: can('organization.view'),
+    // POST/GET/DELETE /api-tokens are Super Admin only.
+    manageApiTokens: role === 'SUPER_ADMIN',
   }
 }

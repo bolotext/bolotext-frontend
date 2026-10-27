@@ -14,6 +14,7 @@ const AgentsPage = lazy(() => import('@/pages/agents/AgentsPage'))
 const AgentDetailPage = lazy(() => import('@/pages/agents/AgentDetailPage'))
 const ProvidersPage = lazy(() => import('@/pages/ProvidersPage'))
 const UsersPage = lazy(() => import('@/pages/UsersPage'))
+const ApiTokensPage = lazy(() => import('@/pages/ApiTokensPage'))
 const OrganizationsPage = lazy(() => import('@/pages/organizations/OrganizationsPage'))
 const OrganizationDetailPage = lazy(() => import('@/pages/organizations/OrganizationDetailPage'))
 const SettingsPage = lazy(() => import('@/pages/SettingsPage'))
@@ -81,6 +82,14 @@ export default function App() {
             element={
               <RequireAbility ability="viewUsers">
                 <UsersPage />
+              </RequireAbility>
+            }
+          />
+          <Route
+            path="api-tokens"
+            element={
+              <RequireAbility ability="manageApiTokens">
+                <ApiTokensPage />
               </RequireAbility>
             }
           />

@@ -9,6 +9,8 @@ import type {
   AgentTemplateOut,
   AgentTemplateSummary,
   AnalyticsSettings,
+  ApiTokenCreated,
+  ApiTokenOut,
   DeploymentSettings,
   DynamicMessageSettings,
   Environment,
@@ -68,6 +70,13 @@ export const usersApi = {
   create: (body: UserCreate) => api.post<UserOut>('/users', body),
   update: (id: string, body: UserUpdate) => api.patch<UserOut>(`/users/${id}`, body),
   disable: (id: string) => api.del<UserOut>(`/users/${id}`),
+}
+
+// ---------- API tokens (Super Admin only) ----------
+export const apiTokensApi = {
+  list: () => api.get<ApiTokenOut[]>('/api-tokens'),
+  create: (name: string) => api.post<ApiTokenCreated>('/api-tokens', { name }),
+  revoke: (id: string) => api.del<ApiTokenOut>(`/api-tokens/${id}`),
 }
 
 // ---------- organizations & memberships ----------

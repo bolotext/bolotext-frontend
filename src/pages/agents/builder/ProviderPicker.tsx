@@ -1,9 +1,14 @@
-import { useId } from 'react'
+import { useId, useState } from 'react'
 import { Zap } from 'lucide-react'
-import type { ProviderInfo } from '@/api/types'
+import type { ProviderInfo, VoiceOption } from '@/api/types'
 import { cn } from '@/lib/utils'
 import { Field, Select } from '@/components/ui/input'
-import { Badge, Skeleton, Tooltip } from '@/components/ui/primitives'
+import { Badge, Segmented, Skeleton, Tooltip } from '@/components/ui/primitives'
+import { VoicePreviewButton } from './VoicePreviewButton'
+import { VoiceSelect } from './VoiceSelect'
+import { hasVoicePreview } from './voicePreview'
+
+type GenderFilter = 'all' | 'female' | 'male'
 
 /** Provider + model dropdowns, driven entirely by GET /providers. */
 export function ProviderPicker({
@@ -32,12 +37,14 @@ export function ProviderPicker({
   agentLanguages?: string[]
   /** TTS only: when `onVoiceChange` is set, shows a Voice ID select fed by the chosen model's voice_ids. */
   voiceId?: string
-  onVoiceChange?: (voiceId: string) => void
+  /** Also receives the voice's gender ('male' | 'female') when the model's voice metadata has one. */
+  onVoiceChange?: (voiceId: string, gender: string | null) => void
   /** When set, shows a language select fed by the chosen model's supported_languages (STT). */
   language?: string
   onLanguageChange?: (code: string) => void
 }) {
   const id = useId()
+  const [gender, setGender] = useState<GenderFilter>('all')
   if (loading) {
     return (
       <div className="grid gap-3 sm:grid-cols-2">
@@ -51,9 +58,25 @@ export function ProviderPicker({
   const model = provider?.models.find((m) => m.model_id === modelId)
   const unknownModel = provider && modelId && !model
   const voices = model?.voice_ids ?? []
+  // Voices with metadata (e.g. Deepgram Aura-2) get a label and a gender filter; plain id lists don't.
+  const voiceOptions: VoiceOption[] = model?.voices?.length
+    ? model.voices
+    : voices.map((v) => ({ voice_id: v, label: v, gender: null, language: null, accent: null }))
+  const filterable = voiceOptions.some((v) => v.gender)
+  // Keep the current voice listed even when the filter would hide it.
+  const shownVoices = voiceOptions
+    .filter((v) => gender === 'all' || v.gender === gender || v.voice_id === voiceId)
+    .map((v) => ({
+      id: v.voice_id,
+      label: filterable ? [v.label, v.language, v.accent].filter(Boolean).join(' · ') : v.label,
+    }))
   const unknownVoice = onVoiceChange && model && voiceId && !voices.includes(voiceId)
-  const pickFirstVoice = (m?: { voice_ids: string[] }) => {
-    if (onVoiceChange && m && !m.voice_ids.includes(voiceId ?? '')) onVoiceChange(m.voice_ids[0] ?? '')
+  const genderOf = (m: { voices?: VoiceOption[] } | undefined, id: string) => m?.voices?.find((v) => v.voice_id === id)?.gender ?? null
+  const pickFirstVoice = (m?: { voice_ids: string[]; voices?: VoiceOption[] }) => {
+    if (onVoiceChange && m && !m.voice_ids.includes(voiceId ?? '')) {
+      const first = m.voice_ids[0] ?? ''
+      onVoiceChange(first, genderOf(m, first))
+    }
   }
   const languages = model?.supported_languages ?? []
   const codes = languages.map((l) => l.code)
@@ -124,23 +147,52 @@ export function ProviderPicker({
 
         {onVoiceChange && (
           <Field label="Voice ID" htmlFor={`${id}-voice`}>
-            <Select
-              id={`${id}-voice`}
-              value={voiceId && voices.includes(voiceId) ? voiceId : ''}
-              disabled={disabled || !model}
-              onChange={(e) => onVoiceChange(e.target.value)}
-            >
-              {!(voiceId && voices.includes(voiceId)) && (
-                <option value="" disabled>
-                  {model ? 'Select a voice' : 'Select a model first'}
-                </option>
-              )}
-              {voices.map((v) => (
-                <option key={v} value={v}>
-                  {v}
-                </option>
-              ))}
-            </Select>
+            {filterable && (
+              <Segmented<GenderFilter>
+                className="mb-2"
+                value={gender}
+                onChange={setGender}
+                options={[
+                  { value: 'all', label: 'All' },
+                  { value: 'female', label: 'Female' },
+                  { value: 'male', label: 'Male' },
+                ]}
+              />
+            )}
+            <div className="flex items-center gap-2">
+              <div className="min-w-0 flex-1">
+                {hasVoicePreview(providerId, voices[0] ?? '') ? (
+                  <VoiceSelect
+                    id={`${id}-voice`}
+                    providerId={providerId}
+                    voices={shownVoices}
+                    value={voiceId && voices.includes(voiceId) ? voiceId : ''}
+                    onChange={(v) => onVoiceChange(v, genderOf(model, v))}
+                    disabled={disabled || !model}
+                    placeholder={model ? 'Select a voice' : 'Select a model first'}
+                  />
+                ) : (
+                  <Select
+                    id={`${id}-voice`}
+                    value={voiceId && voices.includes(voiceId) ? voiceId : ''}
+                    disabled={disabled || !model}
+                    onChange={(e) => onVoiceChange(e.target.value, genderOf(model, e.target.value))}
+                  >
+                    {!(voiceId && voices.includes(voiceId)) && (
+                      <option value="" disabled>
+                        {model ? 'Select a voice' : 'Select a model first'}
+                      </option>
+                    )}
+                    {shownVoices.map((v) => (
+                      <option key={v.id} value={v.id}>
+                        {v.label}
+                      </option>
+                    ))}
+                  </Select>
+                )}
+              </div>
+              {voiceId && voices.includes(voiceId) && <VoicePreviewButton providerId={providerId} voiceId={voiceId} />}
+            </div>
           </Field>
         )}
 

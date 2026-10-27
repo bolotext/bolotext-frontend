@@ -15,6 +15,7 @@ import {
   Settings,
   Sun,
   Users,
+  KeyRound,
   X,
 } from 'lucide-react'
 import { useAuth } from '@/auth/AuthContext'
@@ -239,7 +240,7 @@ function SidebarContent() {
         <NavItem to="/agents" icon={<Bot />}>
           Agents
         </NavItem>
-        {(abilities.viewUsers || abilities.viewOrganizations) && (
+        {(abilities.viewUsers || abilities.viewOrganizations || abilities.manageApiTokens) && (
           <div className="px-2.5 pt-5 pb-1.5 text-[11px] font-medium tracking-wide text-subtle uppercase">Manage</div>
         )}
         {abilities.viewUsers && (
@@ -250,6 +251,11 @@ function SidebarContent() {
         {abilities.viewOrganizations && (
           <NavItem to="/organizations" icon={<Building2 />}>
             Organizations
+          </NavItem>
+        )}
+        {abilities.manageApiTokens && (
+          <NavItem to="/api-tokens" icon={<KeyRound />}>
+            API tokens
           </NavItem>
         )}
         <div className="mt-auto" />
