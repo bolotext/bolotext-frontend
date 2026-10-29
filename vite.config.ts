@@ -4,7 +4,7 @@ import { fileURLToPath, URL } from 'node:url'
 import { defineConfig, loadEnv } from 'vite'
 
 // The backend services don't send CORS headers, so in dev every `/api` and
-// `/health` request is proxied through the API gateway.
+// `/health` request is proxied through the backend.
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   const gateway = env.API_GATEWAY_URL || 'http://localhost:8000'
