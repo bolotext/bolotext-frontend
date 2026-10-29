@@ -28,6 +28,7 @@ import {
   Wrench,
   // Workflow, // Flow tab hidden for now
   FileText,
+  PhoneCall,
 } from 'lucide-react'
 import { useAuth } from '@/auth/AuthContext'
 import { agentsApi } from '@/api/endpoints'
@@ -66,6 +67,7 @@ import DeploymentTab from './builder/DeploymentTab'
 import TestTab from './builder/TestTab'
 import VersionsTab from './builder/VersionsTab'
 import AccessTab from './builder/AccessTab'
+import CallLogsTab from './builder/CallLogsTab'
 
 interface TabDef {
   id: string
@@ -136,6 +138,10 @@ const TAB_GROUPS: { label: string; tabs: TabDef[] }[] = [
         component: AnalyticsTab,
       },
     ],
+  },
+  {
+    label: 'Monitor',
+    tabs: [{ id: 'call-logs', label: 'Call logs', icon: <PhoneCall />, component: CallLogsTab }],
   },
   {
     label: 'Ship',

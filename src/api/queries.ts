@@ -7,6 +7,7 @@ import type { Environment } from './types'
 export const qk = {
   agents: ['agents'] as const,
   agent: (id: string, env: Environment = 'development') => ['agent', id, env] as const,
+  callLogs: (id: string) => ['agent', id, 'call-logs'] as const,
   environments: (id: string) => ['agent', id, 'environments'] as const,
   promptVersions: (id: string) => ['agent', id, 'prompt-versions'] as const,
   assignments: (id: string) => ['agent', id, 'assignments'] as const,

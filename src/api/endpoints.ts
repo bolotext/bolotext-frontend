@@ -21,6 +21,8 @@ import type {
   LoginResponse,
   MCPServer,
   MembershipOut,
+  CallLogList,
+  CallLogOut,
   Feature,
   MyOrganizationOut,
   OrganizationCreate,
@@ -125,6 +127,20 @@ export const templatesApi = {
   get: (key: string) => api.get<AgentTemplateOut>(`/agent-templates/${key}`),
   createAgent: (key: string, body: { name?: string | null; description?: string | null }) =>
     api.post<AgentOut>(`/agent-templates/${key}/create-agent`, body),
+}
+
+export interface CallLogParams {
+  q?: string
+  status?: string
+  source?: string
+  test?: boolean
+  skip?: number
+  limit?: number
+}
+
+export const callLogsApi = {
+  list: (agentId: string, p: CallLogParams) => api.get<CallLogList>(`/agents/${agentId}/call-logs`, { ...p }),
+  get: (agentId: string, logId: string) => api.get<CallLogOut>(`/agents/${agentId}/call-logs/${logId}`),
 }
 
 export const agentsApi = {

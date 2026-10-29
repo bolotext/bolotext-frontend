@@ -604,3 +604,47 @@ export interface WhatsAppRefreshResult {
   errors: number
   simulated: number
 }
+
+// ---------- call logs ----------
+export interface CallLogSummary {
+  id: string
+  agent_id: string
+  session_id: string | null
+  source: string | null
+  direction: string | null
+  status: string | null
+  test: boolean
+  duration: string | null
+  duration_seconds: number | null
+  started_at: string | null
+  from_phone: string | null
+  to_phone: string | null
+  web_uuid: string | null
+  recording_sid: string | null
+  hangup_reason: string | null
+  messages: number
+  created_at: string
+}
+export interface CallLogList {
+  items: CallLogSummary[]
+  total: number
+}
+/** One entry of the stored conversation journey; its shape depends on `type`. */
+export interface JourneyItem {
+  id?: string
+  type?: string
+  role?: string
+  content?: string[]
+  interrupted?: boolean
+  created_at?: number
+  [key: string]: unknown
+}
+export interface CallLogInteraction {
+  details?: Record<string, unknown>
+  token_usage?: Record<string, number>
+  interaction_journey?: JourneyItem[]
+  [key: string]: unknown
+}
+export interface CallLogOut extends CallLogSummary {
+  interaction: CallLogInteraction
+}

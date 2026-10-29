@@ -103,8 +103,8 @@ function TokenRevealModal({ token, onClose }: { token: ApiTokenCreated | null; o
           </div>
           <p className="text-xs text-muted">
             Send it as <code className="font-mono">Authorization: Bearer &lt;token&gt;</code> to{' '}
-            <code className="font-mono">GET /api/v1/agents/config?agent_id=…&amp;environment=…</code>. It can read agent
-            configs and nothing else.
+            <code className="font-mono">GET /api/v1/agents/config?agent_id=…&amp;environment=…</code> to read agent configs, and to{' '}
+            <code className="font-mono">POST /api/v1/call-logs</code> to upload finished calls. It can do nothing else.
           </p>
         </div>
       )}
