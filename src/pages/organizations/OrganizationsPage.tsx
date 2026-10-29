@@ -5,7 +5,9 @@ import { toast } from 'sonner'
 import { Building2, Plus } from 'lucide-react'
 import { useAuth } from '@/auth/AuthContext'
 import { orgsApi } from '@/api/endpoints'
-import type { OrganizationStatus } from '@/api/types'
+import type { Feature, OrganizationStatus } from '@/api/types'
+import { FeatureAccess } from '@/components/FeatureAccess'
+import { ALL_FEATURES, FEATURES } from '@/lib/features'
 import { formatDate, slugify } from '@/lib/utils'
 import { Page, PageHeader } from '@/components/layout/Page'
 import { Button } from '@/components/ui/button'
@@ -35,6 +37,7 @@ function CreateOrgModal({ open, onOpenChange }: { open: boolean; onOpenChange: (
     withAdmin: true,
     admin_full_name: '',
     admin_email: '',
+    features: ALL_FEATURES as Feature[],
   }
   const [f, setF] = useState(blank)
 
@@ -43,6 +46,7 @@ function CreateOrgModal({ open, onOpenChange }: { open: boolean; onOpenChange: (
       orgsApi.create({
         name: f.name.trim(),
         slug: f.slug.trim(),
+        features: f.features,
         ...(f.withAdmin
           ? {
               admin_email: f.admin_email.trim(),
@@ -62,7 +66,7 @@ function CreateOrgModal({ open, onOpenChange }: { open: boolean; onOpenChange: (
   })
 
   const adminValid = !f.withAdmin || (/\S+@\S+\.\S+/.test(f.admin_email))
-  const valid = f.name.trim() && f.slug.trim() && adminValid
+  const valid = f.name.trim() && f.slug.trim() && adminValid && f.features.length > 0
 
   return (
     <Modal
@@ -98,6 +102,9 @@ function CreateOrgModal({ open, onOpenChange }: { open: boolean; onOpenChange: (
             />
           </Field>
         </div>
+        <Field label="Access" hint="Which products this organization can use. You can change this later.">
+          <FeatureAccess value={f.features} onChange={(features) => setF({ ...f, features })} />
+        </Field>
         <div className="rounded-xl border border-line p-4">
           <label className="flex items-center justify-between">
             <div>
@@ -195,12 +202,13 @@ export default function OrganizationsPage() {
                 <tr>
                   <Th>Organization</Th>
                   <Th>Status</Th>
+                  <Th className="hidden md:table-cell">Access</Th>
                   <Th className="hidden md:table-cell">Created</Th>
                   <Th className="hidden md:table-cell">Updated</Th>
                 </tr>
               </THead>
               {list.isLoading ? (
-                <TableSkeleton cols={4} />
+                <TableSkeleton cols={5} />
               ) : (
                 <tbody>
                   {rows.map((o) => (
@@ -218,6 +226,13 @@ export default function OrganizationsPage() {
                       </Td>
                       <Td>
                         <OrgStatusBadge status={o.status} />
+                      </Td>
+                      <Td className="hidden md:table-cell">
+                        <div className="flex flex-wrap gap-1">
+                          {FEATURES.filter((f) => o.features.includes(f.id)).map((f) => (
+                            <Badge key={f.id}>{f.label}</Badge>
+                          ))}
+                        </div>
                       </Td>
                       <Td className="hidden text-muted md:table-cell">{formatDate(o.created_at)}</Td>
                       <Td className="hidden text-muted md:table-cell">{formatDate(o.updated_at)}</Td>

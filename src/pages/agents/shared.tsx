@@ -124,10 +124,14 @@ export function LanguagePicker({
   onChange: (v: string[]) => void;
   disabled?: boolean;
 }) {
-  const options = useLanguageOptions();
-  // Keep already-configured codes visible even if no provider lists them.
+  const { data: options = [] } = useLanguageOptions();
+  const names = useMemo(
+    () => new Map(options.map((l) => [l.code, l.name])),
+    [options],
+  );
+  // Keep already-configured codes visible even if they're not in the offered list.
   const all = useMemo(
-    () => [...new Set([...value, ...options])],
+    () => [...new Set([...value, ...options.map((l) => l.code)])],
     [value, options],
   );
   return (
@@ -156,7 +160,7 @@ export function LanguagePicker({
             )}
           >
             {on && <Check className="size-3" />}
-            {languageLabel(code)}
+            {names.get(code) ?? languageLabel(code)}
             <span className="font-mono text-[10px] opacity-70">{code}</span>
           </button>
         );

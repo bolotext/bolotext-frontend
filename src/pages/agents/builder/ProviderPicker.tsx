@@ -80,7 +80,6 @@ export function ProviderPicker({
   }
   const languages = model?.supported_languages ?? []
   const codes = languages.map((l) => l.code)
-  const missing = (model && agentLanguages?.filter((l) => codes.length && !codes.includes(l))) ?? []
 
   return (
     <div className="space-y-4">
@@ -266,11 +265,6 @@ export function ProviderPicker({
                   {l.code}
                 </span>
               ))}
-            </div>
-          )}
-          {missing.length > 0 && (
-            <div className="mt-1.5 text-[11px] text-warning">
-              Doesn&apos;t list {missing.join(', ')} — check language support for this agent.
             </div>
           )}
         </div>

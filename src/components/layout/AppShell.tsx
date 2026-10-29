@@ -9,6 +9,7 @@ import {
   LayoutDashboard,
   LogOut,
   Menu as MenuIcon,
+  MessageSquare,
   Monitor,
   Moon,
   Search,
@@ -17,6 +18,7 @@ import {
   Users,
   KeyRound,
   X,
+  Smartphone,
 } from 'lucide-react'
 import { useAuth } from '@/auth/AuthContext'
 import { ROLE_LABEL } from '@/lib/permissions'
@@ -225,7 +227,7 @@ function UserMenu() {
 }
 
 function SidebarContent() {
-  const { abilities } = useAuth()
+  const { abilities, hasFeature } = useAuth()
   return (
     <div className="flex h-full flex-col gap-4 p-3">
       <Link to="/" className="px-1.5 pt-1">
@@ -237,9 +239,21 @@ function SidebarContent() {
         <NavItem to="/" end icon={<LayoutDashboard />}>
           Dashboard
         </NavItem>
-        <NavItem to="/agents" icon={<Bot />}>
-          Agents
-        </NavItem>
+        {hasFeature('voice_agents') && (
+          <NavItem to="/agents" icon={<Bot />}>
+            Voice Agents
+          </NavItem>
+        )}
+        {hasFeature('whatsapp') && (
+          <NavItem to="/whatsapp" icon={<MessageSquare />}>
+            WhatsApp Messaging
+          </NavItem>
+        )}
+        {hasFeature('sms') && (
+          <NavItem to="/sms" icon={<Smartphone />}>
+            Send an SMS
+          </NavItem>
+        )}
         {(abilities.viewUsers || abilities.viewOrganizations || abilities.manageApiTokens) && (
           <div className="px-2.5 pt-5 pb-1.5 text-[11px] font-medium tracking-wide text-subtle uppercase">Manage</div>
         )}

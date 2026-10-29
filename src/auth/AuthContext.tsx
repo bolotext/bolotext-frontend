@@ -2,7 +2,8 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { onSessionExpired, tokens } from '@/api/client'
 import { authApi, usersApi } from '@/api/endpoints'
-import type { MyOrganizationOut, OrganizationChoice, UserOut } from '@/api/types'
+import type { Feature, MyOrganizationOut, OrganizationChoice, UserOut } from '@/api/types'
+import { ALL_FEATURES } from '@/lib/features'
 import { abilitiesFor, effectiveRole, type Abilities } from '@/lib/permissions'
 
 type LoginResult = { ok: true } | { ok: false; organizations: OrganizationChoice[] }
@@ -12,6 +13,9 @@ interface AuthState {
   loading: boolean
   error: unknown
   abilities: Abilities
+  /** Product areas the current organization may use. */
+  features: Feature[]
+  hasFeature: (feature: Feature) => boolean
   organizations: MyOrganizationOut[]
   currentOrg: MyOrganizationOut | null
   login: (credential: string, organizationId?: string) => Promise<LoginResult>
@@ -87,12 +91,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const user = hasToken ? (meQuery.data ?? null) : null
   const organizations = useMemo(() => orgsQuery.data ?? [], [orgsQuery.data])
+  const features = useMemo<Feature[]>(() => user?.features ?? ALL_FEATURES, [user])
   const value = useMemo<AuthState>(
     () => ({
       user,
       loading: hasToken && meQuery.isPending,
       error: hasToken ? meQuery.error : null,
       abilities: abilitiesFor(effectiveRole(user)),
+      features,
+      hasFeature: (f) => features.includes(f),
       organizations,
       currentOrg: organizations.find((o) => o.organization_id === user?.organization_id) ?? null,
       login,
@@ -100,7 +107,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       switchOrganization,
       refreshUser: meQuery.refetch,
     }),
-    [user, hasToken, meQuery.isPending, meQuery.error, meQuery.refetch, organizations, login, logout, switchOrganization],
+    [user, features, hasToken, meQuery.isPending, meQuery.error, meQuery.refetch, organizations, login, logout, switchOrganization],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { useMemo } from 'react'
 import { useAuth } from '@/auth/AuthContext'
-import { agentsApi, fetchAllAgents, fetchAllMembers, fetchAllUsers, providersApi, templatesApi } from './endpoints'
+import { agentsApi, fetchAllAgents, fetchAllMembers, fetchAllUsers, languagesApi, providersApi, templatesApi } from './endpoints'
 import type { Environment } from './types'
 
 export const qk = {
@@ -11,9 +11,23 @@ export const qk = {
   promptVersions: (id: string) => ['agent', id, 'prompt-versions'] as const,
   assignments: (id: string) => ['agent', id, 'assignments'] as const,
   providers: ['providers'] as const,
+  languages: ['languages'] as const,
   templates: ['agent-templates'] as const,
   users: ['users'] as const,
   orgs: ['organizations'] as const,
+  wa: {
+    config: ['whatsapp', 'config'] as const,
+    settings: ['whatsapp', 'settings'] as const,
+    agents: ['whatsapp', 'agents'] as const,
+    agent: (id: string) => ['whatsapp', 'agent', id] as const,
+    templates: (id: string) => ['whatsapp', 'agent', id, 'templates'] as const,
+    twilioTemplates: (id: string) => ['whatsapp', 'agent', id, 'twilio-templates'] as const,
+    batches: (id: string) => ['whatsapp', 'agent', id, 'batches'] as const,
+    contacts: (id: string) => ['whatsapp', 'agent', id, 'contacts'] as const,
+    stats: (id: string) => ['whatsapp', 'agent', id, 'stats'] as const,
+    messages: (id: string) => ['whatsapp', 'agent', id, 'messages'] as const,
+    events: (id: string, cid: string) => ['whatsapp', 'agent', id, 'messages', cid, 'events'] as const,
+  },
   members: (orgId: string) => ['organizations', orgId, 'members'] as const,
 }
 
@@ -69,13 +83,7 @@ export function useOrgMembers(orgId: string | null | undefined, enabled = true) 
   })
 }
 
-/** Union of language codes supported by any active STT/TTS/LLM model. */
+/** Languages offered when creating/configuring an agent (GET /languages). Independent of any STT/TTS model. */
 export function useLanguageOptions() {
-  const { data } = useProviders()
-  return useMemo(() => {
-    const set = new Set<string>()
-    for (const group of [data?.stt, data?.tts, data?.llm])
-      for (const p of group ?? []) for (const m of p.models) if (m.is_active) m.supported_languages.forEach((l) => set.add(l.code))
-    return [...set].sort()
-  }, [data])
+  return useQuery({ queryKey: qk.languages, queryFn: languagesApi.list, staleTime: 10 * 60_000 })
 }

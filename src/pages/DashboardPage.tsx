@@ -5,6 +5,7 @@ import { ArrowRight, Bot, Building2, Cpu, Plus, Power, ShieldCheck, Users } from
 import { useAuth } from '@/auth/AuthContext'
 import { fetchAllUsers, orgsApi } from '@/api/endpoints'
 import { useAllAgents, useProviders } from '@/api/queries'
+import { FEATURES } from '@/lib/features'
 import { ROLE_DESCRIPTION, ROLE_LABEL } from '@/lib/permissions'
 import { timeAgo } from '@/lib/utils'
 import { Page } from '@/components/layout/Page'
@@ -47,7 +48,41 @@ function greeting() {
   return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening'
 }
 
+/** Home for organizations without Voice Agents: shortcuts to whatever they do have. */
+function ProductsHome() {
+  const { user, currentOrg, hasFeature } = useAuth()
+  const mine = FEATURES.filter((f) => hasFeature(f.id))
+  return (
+    <Page wide>
+      <div className="mb-8">
+        <p className="text-[13px] text-muted">{currentOrg?.name ?? ''}</p>
+        <h1 className="mt-0.5 text-2xl font-semibold tracking-tight">
+          {greeting()}, {user?.full_name?.split(' ')[0]}
+        </h1>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {mine.map((f) => (
+          <Link key={f.id} to={f.path}>
+            <Card className="h-full p-4 transition-all hover:border-line-strong">
+              <div className="flex items-center justify-between text-[13px] font-medium">
+                {f.label}
+                <ArrowRight className="size-4 text-muted" />
+              </div>
+              <p className="mt-1 text-xs text-muted">{f.description}</p>
+            </Card>
+          </Link>
+        ))}
+      </div>
+    </Page>
+  )
+}
+
 export default function DashboardPage() {
+  const { hasFeature } = useAuth()
+  return hasFeature('voice_agents') ? <VoiceDashboard /> : <ProductsHome />
+}
+
+function VoiceDashboard() {
   const { user, abilities, currentOrg } = useAuth()
   const agents = useAllAgents()
   const providers = useProviders()

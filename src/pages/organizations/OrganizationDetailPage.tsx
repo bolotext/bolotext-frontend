@@ -2,11 +2,12 @@ import { useMemo, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { Building2, Pause, Play, Plus, UserMinus, UserPlus, Users } from 'lucide-react'
+import { Building2, Pause, Play, Plus, ShieldCheck, UserMinus, UserPlus, Users } from 'lucide-react'
 import { useAuth } from '@/auth/AuthContext'
 import { fetchAllUsers, orgsApi } from '@/api/endpoints'
 import { qk, useOrgMembers } from '@/api/queries'
-import type { OrgRole } from '@/api/types'
+import type { Feature, OrgRole } from '@/api/types'
+import { FeatureAccess } from '@/components/FeatureAccess'
 import { formatDate } from '@/lib/utils'
 import { ROLE_LABEL } from '@/lib/permissions'
 import { Page, PageHeader } from '@/components/layout/Page'
@@ -89,16 +90,18 @@ export default function OrganizationDetailPage() {
   const org = useQuery({ queryKey: ['organizations', orgId], queryFn: () => orgsApi.get(orgId) })
   const members = useOrgMembers(orgId)
   const [name, setName] = useState<string | null>(null)
+  const [features, setFeatures] = useState<Feature[] | null>(null)
   const [filter, setFilter] = useState('')
   const [addOpen, setAddOpen] = useState(false)
   const [createOpen, setCreateOpen] = useState(false)
 
   const update = useMutation({
-    mutationFn: (body: { name?: string; status?: 'active' | 'suspended' }) => orgsApi.update(orgId, body),
+    mutationFn: (body: { name?: string; status?: 'active' | 'suspended'; features?: Feature[] }) => orgsApi.update(orgId, body),
     onSuccess: (o) => {
       qc.setQueryData(['organizations', orgId], o)
       void qc.invalidateQueries({ queryKey: ['organizations'] })
       setName(null)
+      setFeatures(null)
       toast.success('Organization updated')
     },
     onError: (e) => toastError(e),
@@ -287,6 +290,22 @@ export default function OrganizationDetailPage() {
         </Card>
 
         <div className="space-y-6">
+          <Card>
+            <CardHeader icon={<ShieldCheck />} title="Access" />
+            <CardBody className="space-y-3">
+              <p className="text-xs text-muted">Members of this organization can only use the products ticked here. Changes apply immediately.</p>
+              <FeatureAccess value={features ?? o.features} onChange={setFeatures} disabled={!canUpdate} />
+              {features !== null && [...features].sort().join() !== [...o.features].sort().join() && (
+                <div className="flex justify-end gap-2">
+                  <Button onClick={() => setFeatures(null)}>Discard</Button>
+                  <Button variant="primary" loading={update.isPending} onClick={() => update.mutate({ features })}>
+                    Save access
+                  </Button>
+                </div>
+              )}
+            </CardBody>
+          </Card>
+
           <Card>
             <CardHeader icon={<Building2 />} title="Details" />
             <CardBody className="space-y-4">

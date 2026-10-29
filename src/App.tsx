@@ -6,12 +6,17 @@ import { AppShell } from '@/components/layout/AppShell'
 import { Page } from '@/components/layout/Page'
 import { EmptyState, ErrorState, Spinner } from '@/components/ui/primitives'
 import { Button } from '@/components/ui/button'
+import type { Feature } from '@/api/types'
 import type { Abilities } from '@/lib/permissions'
 import LoginPage from '@/pages/LoginPage'
 
 const DashboardPage = lazy(() => import('@/pages/DashboardPage'))
 const AgentsPage = lazy(() => import('@/pages/agents/AgentsPage'))
 const AgentDetailPage = lazy(() => import('@/pages/agents/AgentDetailPage'))
+const WhatsAppPage = lazy(() => import('@/pages/whatsapp/WhatsAppPage'))
+const WhatsAppAgentPage = lazy(() => import('@/pages/whatsapp/WhatsAppAgentPage'))
+const SmsPage = lazy(() => import('@/pages/whatsapp/SmsPage'))
+const SmsAgentPage = lazy(() => import('@/pages/whatsapp/SmsAgentPage'))
 const ProvidersPage = lazy(() => import('@/pages/ProvidersPage'))
 const UsersPage = lazy(() => import('@/pages/UsersPage'))
 const ApiTokensPage = lazy(() => import('@/pages/ApiTokensPage'))
@@ -45,6 +50,23 @@ function RequireAuth({ children }: { children: ReactNode }) {
   return <>{children}</>
 }
 
+/** Product areas a Super Admin can switch off per organization. */
+function RequireFeature({ feature, children }: { feature: Feature; children: ReactNode }) {
+  const { hasFeature } = useAuth()
+  if (!hasFeature(feature)) {
+    return (
+      <Page>
+        <EmptyState
+          icon={<ShieldOff />}
+          title="Not enabled for your organization"
+          description="This product isn't part of your organization's plan. Ask your platform administrator to turn it on."
+        />
+      </Page>
+    )
+  }
+  return <>{children}</>
+}
+
 function RequireAbility({ ability, children }: { ability: keyof Omit<Abilities, 'role' | 'can'>; children: ReactNode }) {
   const { abilities } = useAuth()
   if (!abilities[ability]) {
@@ -74,9 +96,13 @@ export default function App() {
           }
         >
           <Route index element={<DashboardPage />} />
-          <Route path="agents" element={<AgentsPage />} />
-          <Route path="agents/:agentId/:tab?" element={<AgentDetailPage />} />
-          <Route path="providers" element={<ProvidersPage />} />
+          <Route path="agents" element={<RequireFeature feature="voice_agents"><AgentsPage /></RequireFeature>} />
+          <Route path="agents/:agentId/:tab?" element={<RequireFeature feature="voice_agents"><AgentDetailPage /></RequireFeature>} />
+          <Route path="whatsapp" element={<RequireFeature feature="whatsapp"><WhatsAppPage /></RequireFeature>} />
+          <Route path="whatsapp/:agentId/:tab?" element={<RequireFeature feature="whatsapp"><WhatsAppAgentPage /></RequireFeature>} />
+          <Route path="sms" element={<RequireFeature feature="sms"><SmsPage /></RequireFeature>} />
+          <Route path="sms/:agentId/:tab?" element={<RequireFeature feature="sms"><SmsAgentPage /></RequireFeature>} />
+          <Route path="providers" element={<RequireFeature feature="voice_agents"><ProvidersPage /></RequireFeature>} />
           <Route
             path="users"
             element={

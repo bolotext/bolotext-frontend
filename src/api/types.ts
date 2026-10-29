@@ -6,6 +6,8 @@ export type Role = 'SUPER_ADMIN' | 'ADMIN' | 'DEVELOPER' | 'QA'
 export type OrgRole = Exclude<Role, 'SUPER_ADMIN'>
 export type UserStatus = 'active' | 'invited' | 'disabled'
 export type OrganizationStatus = 'active' | 'suspended'
+/** Product areas a Super Admin can switch on or off per organization. */
+export type Feature = 'voice_agents' | 'whatsapp' | 'sms'
 
 export interface Envelope<T> {
   status: 'success' | 'error'
@@ -38,6 +40,8 @@ export interface TokenResponse {
 
 export interface UserOut {
   id: string
+  /** Product areas this user may use; only set by GET /users/me. */
+  features?: Feature[] | null
   organization_id: string | null
   email: string
   full_name: string
@@ -79,6 +83,7 @@ export interface OrganizationOut {
   name: string
   slug: string
   status: OrganizationStatus
+  features: Feature[]
   created_by: string
   created_at: string
   updated_at: string
@@ -89,6 +94,7 @@ export interface OrganizationCreate {
   slug: string
   admin_email?: string | null
   admin_full_name?: string | null
+  features?: Feature[]
 }
 
 export interface OrganizationCreateResponse {
@@ -395,4 +401,206 @@ export interface ApiTokenOut {
 export interface ApiTokenCreated extends ApiTokenOut {
   /** The full token — returned only by the create call, never again. */
   token: string
+}
+
+// ---------- whatsapp (agents-service /whatsapp) ----------
+export type WhatsAppAgentStatus = 'active' | 'inactive'
+export type TemplateCategory = 'utility' | 'marketing' | 'authentication'
+export type ApprovalStatus = 'draft' | 'pending' | 'approved' | 'rejected'
+export type SendStatus = 'pending' | 'queued' | 'sent' | 'delivered' | 'read' | 'failed'
+
+export interface WhatsAppAgentOut {
+  id: string
+  org_id: string | null
+  user_id: string
+  name: string
+  description: string | null
+  use_case: string | null
+  twilio_sender: string | null
+  channel: 'whatsapp' | 'sms'
+  status: WhatsAppAgentStatus
+  field_mapper: WhatsAppField[]
+  created_at: string
+  updated_at: string
+}
+export type WhatsAppFieldType = 'string' | 'number' | 'long' | 'boolean' | 'checkbox' | 'date'
+export interface WhatsAppFieldInput {
+  key: string
+  type: WhatsAppFieldType
+  required: boolean
+}
+export interface WhatsAppField extends WhatsAppFieldInput {
+  locked: boolean
+}
+export interface WhatsAppAgentCreate {
+  channel?: 'whatsapp' | 'sms'
+  name: string
+  description?: string | null
+  use_case?: string | null
+  twilio_sender?: string | null
+}
+export type WhatsAppAgentUpdate = Partial<WhatsAppAgentCreate> & { status?: WhatsAppAgentStatus }
+
+export interface WhatsAppConfig {
+  dry_run: boolean
+  default_sender_configured: boolean
+  default_sms_sender_configured: boolean
+}
+
+export type TemplateSource = 'bolotext' | 'twilio'
+export interface WhatsAppTwilioTemplate {
+  sid: string
+  name: string
+  language: string
+  body: string
+  variables: string[]
+  approval_status: string
+  category: string | null
+  rejection_reason: string | null
+  template_id: string | null
+}
+export interface WhatsAppTemplateOut {
+  id: string
+  whatsapp_agent_id: string
+  name: string
+  language: string
+  category: TemplateCategory
+  body: string
+  variables: string[]
+  var_names: string[]
+  source: TemplateSource
+  twilio_content_sid: string | null
+  approval_status: ApprovalStatus
+  rejection_reason: string | null
+  created_at: string
+  updated_at: string
+}
+export interface WhatsAppTemplateInput {
+  name: string
+  language: string
+  category: TemplateCategory
+  body: string
+}
+
+export interface WhatsAppContactOut {
+  id: string
+  whatsapp_agent_id: string
+  batch_id: string | null
+  customer_name: string
+  phone_number: number // E.164 digits without '+', stored as a MongoDB long
+  message: string
+  data: Record<string, unknown>
+  send_status: SendStatus
+  opted_out: boolean
+  template_id: string | null
+  twilio_message_sid: string | null
+  error: string | null
+  sent_at: string | null
+  created_at: string
+  updated_at: string
+}
+export interface WhatsAppContactInput {
+  customer_name: string
+  phone_number: string // any common format; stored as an integer
+  data?: Record<string, unknown>
+}
+export interface WhatsAppContactList {
+  items: WhatsAppContactOut[]
+  total: number
+}
+export interface WhatsAppBatchOut {
+  id: string
+  whatsapp_agent_id: string
+  filename: string
+  total_rows: number
+  valid_rows: number
+  invalid_rows: number
+  uploaded_by: string
+  created_at: string
+}
+export interface WhatsAppUploadResult {
+  batch: WhatsAppBatchOut
+  errors: { row: number; error: string }[]
+}
+export interface WhatsAppSendRequest {
+  contact_ids?: string[]
+  batch_id?: string
+  template_id?: string | null
+  consent_confirmed: boolean
+}
+export interface WhatsAppSendResult {
+  job_id: string
+  requested: number
+  queued: number
+  skipped: number
+  dry_run: boolean
+}
+export interface WhatsAppStats {
+  total: number
+  pending: number
+  queued: number
+  sent: number
+  delivered: number
+  read: number
+  failed: number
+  opted_out: number
+}
+
+export interface WhatsAppSettings {
+  twilio_account_sid: string
+  has_auth_token: boolean
+  auth_token_hint: string | null
+  twilio_whatsapp_from: string
+  twilio_sms_from: string
+  dry_run: boolean
+  default_country_code: string
+  simulated: boolean
+  updated_at: string | null
+}
+/** Partial update; `auth_token` is write-only (omit/empty keeps the saved one). */
+export interface WhatsAppSettingsUpdate {
+  twilio_account_sid?: string
+  auth_token?: string
+  twilio_whatsapp_from?: string
+  twilio_sms_from?: string
+  dry_run?: boolean
+  default_country_code?: string
+}
+export interface WhatsAppConnectionTest {
+  ok: boolean
+  detail: string
+}
+
+export interface WhatsAppMessageStatus {
+  contact_id: string
+  customer_name: string
+  phone_number: number // E.164 digits without '+', stored as a MongoDB long
+  message_sid: string | null
+  status: string | null
+  send_status: SendStatus
+  error_code: string | null
+  error_message: string | null
+  sent_at: string | null
+  status_at: string | null
+  events: number
+}
+export interface WhatsAppMessageStatusList {
+  items: WhatsAppMessageStatus[]
+  total: number
+}
+export interface WhatsAppMessageEvent {
+  id: string
+  message_sid: string | null
+  status: string
+  error_code: string | null
+  error_message: string | null
+  source: 'send' | 'webhook' | 'refresh'
+  payload: Record<string, string>
+  received_at: string
+}
+export interface WhatsAppRefreshResult {
+  checked: number
+  updated: number
+  errors: number
+  simulated: number
 }

@@ -21,6 +21,7 @@ import type {
   LoginResponse,
   MCPServer,
   MembershipOut,
+  Feature,
   MyOrganizationOut,
   OrganizationCreate,
   OrganizationCreateResponse,
@@ -40,6 +41,28 @@ import type {
   UserStatus,
   UserUpdate,
   VoicePersonaSection,
+  WhatsAppAgentCreate,
+  WhatsAppAgentOut,
+  WhatsAppAgentUpdate,
+  WhatsAppBatchOut,
+  WhatsAppConfig,
+  WhatsAppConnectionTest,
+  WhatsAppSettings,
+  WhatsAppSettingsUpdate,
+  WhatsAppContactInput,
+  WhatsAppContactList,
+  WhatsAppContactOut,
+  WhatsAppSendRequest,
+  WhatsAppFieldInput,
+  WhatsAppMessageEvent,
+  WhatsAppMessageStatusList,
+  WhatsAppRefreshResult,
+  WhatsAppSendResult,
+  WhatsAppStats,
+  WhatsAppTemplateInput,
+  WhatsAppTemplateOut,
+  WhatsAppTwilioTemplate,
+  WhatsAppUploadResult,
 } from './types'
 
 // ---------- auth ----------
@@ -84,7 +107,7 @@ export const orgsApi = {
   list: (params: ListParams & { status?: OrganizationStatus }) => api.get<OrganizationOut[]>('/organizations', { ...params }),
   get: (id: string) => api.get<OrganizationOut>(`/organizations/${id}`),
   create: (body: OrganizationCreate) => api.post<OrganizationCreateResponse>('/organizations', body),
-  update: (id: string, body: { name?: string; status?: OrganizationStatus }) =>
+  update: (id: string, body: { name?: string; status?: OrganizationStatus; features?: Feature[] }) =>
     api.patch<OrganizationOut>(`/organizations/${id}`, body),
   members: (orgId: string, params: ListParams = {}) => api.get<MembershipOut[]>(`/organizations/${orgId}/members`, { ...params }),
   addMember: (orgId: string, user_id: string, role: OrgRole) =>
@@ -158,6 +181,10 @@ export const agentsApi = {
   updateMCP: (id: string, servers: MCPServer[]) => api.patch<AgentOut>(a(id, '/mcp'), { servers }),
 }
 
+export const languagesApi = {
+  list: () => api.get<{ code: string; name: string }[]>('/languages'),
+}
+
 export const providersApi = {
   catalog: () => api.get<ProviderCatalog>('/providers'),
 }
@@ -191,4 +218,65 @@ export async function fetchAllMembers(orgId: string): Promise<MembershipOut[]> {
     out.push(...page)
     if (page.length < pageSize || skip > 10_000) return out
   }
+}
+
+// ---------- whatsapp ----------
+export interface WhatsAppContactParams {
+  batch_id?: string
+  status?: string // a send status, or several comma-separated
+  q?: string
+  skip?: number
+  limit?: number
+}
+
+export const whatsappApi = {
+  config: () => api.get<WhatsAppConfig>('/whatsapp/config'),
+  settings: () => api.get<WhatsAppSettings>('/whatsapp/settings'),
+  saveSettings: (body: WhatsAppSettingsUpdate) => api.put<WhatsAppSettings>('/whatsapp/settings', body),
+  testSettings: () => api.post<WhatsAppConnectionTest>('/whatsapp/settings/test'),
+  // agents
+  listAgents: (channel: 'whatsapp' | 'sms') => api.get<WhatsAppAgentOut[]>('/whatsapp/agents', { channel }),
+  getAgent: (id: string) => api.get<WhatsAppAgentOut>(`/whatsapp/agents/${id}`),
+  createAgent: (body: WhatsAppAgentCreate) => api.post<WhatsAppAgentOut>('/whatsapp/agents', body),
+  updateAgent: (id: string, body: WhatsAppAgentUpdate) => api.patch<WhatsAppAgentOut>(`/whatsapp/agents/${id}`, body),
+  saveFieldMapper: (id: string, fields: WhatsAppFieldInput[]) =>
+    api.put<WhatsAppAgentOut>(`/whatsapp/agents/${id}/field-mapper`, { fields }),
+  deleteAgent: (id: string) => api.del<null>(`/whatsapp/agents/${id}`),
+  // templates
+  listTemplates: (id: string) => api.get<WhatsAppTemplateOut[]>(`/whatsapp/agents/${id}/templates`),
+  twilioTemplates: (id: string) => api.get<WhatsAppTwilioTemplate[]>(`/whatsapp/agents/${id}/twilio-templates`),
+  importTemplate: (id: string, content_sid: string, mapping: Record<string, string>) =>
+    api.post<WhatsAppTemplateOut>(`/whatsapp/agents/${id}/templates/import`, { content_sid, mapping }),
+  createTemplate: (id: string, body: WhatsAppTemplateInput) =>
+    api.post<WhatsAppTemplateOut>(`/whatsapp/agents/${id}/templates`, body),
+  updateTemplate: (id: string, tid: string, body: Partial<WhatsAppTemplateInput>) =>
+    api.patch<WhatsAppTemplateOut>(`/whatsapp/agents/${id}/templates/${tid}`, body),
+  deleteTemplate: (id: string, tid: string) => api.del<null>(`/whatsapp/agents/${id}/templates/${tid}`),
+  submitTemplate: (id: string, tid: string) =>
+    api.post<WhatsAppTemplateOut>(`/whatsapp/agents/${id}/templates/${tid}/submit`),
+  syncTemplate: (id: string, tid: string) =>
+    api.post<WhatsAppTemplateOut>(`/whatsapp/agents/${id}/templates/${tid}/sync-status`),
+  // contacts & uploads
+  uploadCsv: (id: string, filename: string, csv: string, consent_confirmed: boolean) =>
+    api.post<WhatsAppUploadResult>(`/whatsapp/agents/${id}/contacts/upload`, { filename, csv, consent_confirmed }),
+  listBatches: (id: string) => api.get<WhatsAppBatchOut[]>(`/whatsapp/agents/${id}/batches`),
+  deleteBatch: (id: string, bid: string) => api.del<null>(`/whatsapp/agents/${id}/batches/${bid}`),
+  listContacts: (id: string, p: WhatsAppContactParams) =>
+    api.get<WhatsAppContactList>(`/whatsapp/agents/${id}/contacts`, { ...p }),
+  messageStatus: (id: string, p: { status?: string; q?: string; skip?: number; limit?: number }) =>
+    api.get<WhatsAppMessageStatusList>(`/whatsapp/agents/${id}/messages`, { ...p }),
+  refreshMessages: (id: string, contact_ids?: string[]) =>
+    api.post<WhatsAppRefreshResult>(`/whatsapp/agents/${id}/messages/refresh`, contact_ids ? { contact_ids } : {}),
+  messageEvents: (id: string, cid: string) =>
+    api.get<WhatsAppMessageEvent[]>(`/whatsapp/agents/${id}/messages/${cid}/events`),
+  stats: (id: string) => api.get<WhatsAppStats>(`/whatsapp/agents/${id}/stats`),
+  createContact: (id: string, body: WhatsAppContactInput) =>
+    api.post<WhatsAppContactOut>(`/whatsapp/agents/${id}/contacts`, body),
+  updateContact: (id: string, cid: string, body: Partial<WhatsAppContactInput> & { opted_out?: boolean }) =>
+    api.patch<WhatsAppContactOut>(`/whatsapp/agents/${id}/contacts/${cid}`, body),
+  deleteContact: (id: string, cid: string) => api.del<null>(`/whatsapp/agents/${id}/contacts/${cid}`),
+  bulkDeleteContacts: (id: string, contact_ids: string[]) =>
+    api.post<number>(`/whatsapp/agents/${id}/contacts/bulk-delete`, { contact_ids }),
+  // send
+  send: (id: string, body: WhatsAppSendRequest) => api.post<WhatsAppSendResult>(`/whatsapp/agents/${id}/send`, body),
 }
