@@ -65,14 +65,17 @@ export function ChannelPicker({
   value,
   onChange,
   disabled,
+  exclude = [],
 }: {
   value: string[];
   onChange: (v: string[]) => void;
   disabled?: boolean;
+  /** Channel values to leave out of the picker. */
+  exclude?: string[];
 }) {
   return (
     <div className="grid grid-cols-2 gap-2">
-      {CHANNELS.map((c) => {
+      {CHANNELS.filter((c) => !exclude.includes(c.value)).map((c) => {
         const on = value.includes(c.value);
         return (
           <button
@@ -373,6 +376,7 @@ export function CreateAgentModal({
               <ChannelPicker
                 value={form.bot_type}
                 onChange={(bot_type) => setForm({ ...form, bot_type })}
+                exclude={["chat"]}
               />
             </Field>
             <Field

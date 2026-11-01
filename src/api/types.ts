@@ -659,3 +659,78 @@ export interface WebCallToken {
   agent_id: string
   environment: Environment
 }
+
+// ---------- Usage & pricing (Super Admin) ----------
+export type UsageKind = 'stt' | 'llm' | 'tts'
+
+export interface UsageTotals {
+  calls: number
+  input_tokens: number
+  cached_tokens: number
+  output_tokens: number
+  audio_seconds: number
+  characters: number
+}
+
+export interface KindSummary {
+  kind: UsageKind
+  usage: UsageTotals
+  cost: number
+  unpriced_models: number
+}
+
+export interface UsageSummary {
+  kinds: KindSummary[]
+  cost: number
+  has_unpriced: boolean
+}
+
+export interface OrgUsageRow extends UsageSummary {
+  org_id: string
+  org_name: string
+}
+
+export interface CostLine {
+  kind: UsageKind
+  provider_id: string
+  model_id: string
+  usage: UsageTotals
+  cost: number | null
+}
+
+export interface DailyPoint {
+  day: string
+  cost: number
+  calls: number
+}
+
+export interface UsageOverview {
+  currency: string
+  usd_to_inr: number | null
+  total: UsageSummary
+  organizations: OrgUsageRow[]
+  daily: DailyPoint[]
+}
+
+export interface OrgUsageDetail {
+  currency: string
+  usd_to_inr: number | null
+  org_id: string
+  org_name: string
+  total: UsageSummary
+  models: CostLine[]
+  daily: DailyPoint[]
+}
+
+export interface ModelPrice {
+  kind: UsageKind
+  provider_id: string
+  model_id: string
+  currency: string
+  input_per_million: number | null
+  cached_input_per_million: number | null
+  output_per_million: number | null
+  per_minute: number | null
+  per_million_chars: number | null
+  priced?: boolean
+}

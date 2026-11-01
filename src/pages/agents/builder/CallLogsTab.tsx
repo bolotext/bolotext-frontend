@@ -9,6 +9,7 @@ import { cn, formatDate, timeAgo } from '@/lib/utils'
 import { SearchInput, Select } from '@/components/ui/input'
 import { Modal } from '@/components/ui/overlay'
 import { Badge, Card, EmptyState, ErrorState, Skeleton } from '@/components/ui/primitives'
+import { LatencyGauge } from './LatencyCharts'
 import { Pager, Table, TableSkeleton, Td, Th, THead, Tr } from '@/components/ui/table'
 
 const PAGE_SIZE = 25
@@ -185,10 +186,6 @@ const USAGE: [string, string, string?][] = [
   ['llm_prompt_cached_tokens', 'Cached prompt tokens'],
   ['stt_audio_duration', 'STT audio', 's'],
   ['tts_characters_count', 'TTS characters'],
-  ['average_e2e_latency', 'Avg end-to-end latency', 'ms'],
-  ['average_stt_latency', 'Avg STT latency', 'ms'],
-  ['average_llm_latency', 'Avg LLM latency', 'ms'],
-  ['average_tts_latency', 'Avg TTS latency', 'ms'],
   ['average_rag_latency', 'Avg knowledge-base latency', 'ms'],
   ['average_tool_call_latency', 'Avg tool-call latency', 'ms'],
 ]
@@ -290,16 +287,37 @@ function CallDetail({ c }: { c: CallLogOut }) {
         <Fact name="Ended by">{c.hangup_reason?.replace(/_/g, ' ')}</Fact>
       </dl>
 
-      <section>
-        <h3 className="mb-2 text-[13px] font-semibold text-fg">Token usage &amp; latency</h3>
-        <dl className="grid grid-cols-2 gap-x-6 gap-y-3 rounded-xl border border-line p-4 sm:grid-cols-4">
-          {USAGE.filter(([k]) => usage[k] !== undefined).map(([k, name, unit]) => (
-            <Fact key={k} name={name}>
-              {usage[k] < 0 ? 'n/a' : `${usage[k].toLocaleString()}${unit ? ` ${unit}` : ''}`}
-            </Fact>
-          ))}
-        </dl>
-      </section>
+      {usage.average_e2e_latency >= 0 && (
+        <section>
+          <h3 className="mb-2 text-[13px] font-semibold text-fg">Latency</h3>
+          <div className="grid items-center gap-6 rounded-xl border border-line p-5 md:grid-cols-[minmax(0,280px)_minmax(0,1fr)]">
+            <LatencyGauge ms={usage.average_e2e_latency} />
+            <dl className="grid grid-cols-3 gap-4">
+              {(
+                [
+                  ['average_stt_latency', 'STT latency'],
+                  ['average_llm_latency', 'LLM latency'],
+                  ['average_tts_latency', 'TTS latency'],
+                ] as const
+              ).map(([k, name]) => (
+                <div key={k} className="rounded-lg bg-surface-2/60 p-3">
+                  <dt className="text-xs text-muted">{name}</dt>
+                  <dd className="mt-1 text-xl font-semibold tracking-tight">
+                    {usage[k] === undefined || usage[k] < 0 ? (
+                      'n/a'
+                    ) : (
+                      <>
+                        {Math.round(usage[k]).toLocaleString()}
+                        <span className="ml-1 text-xs font-normal text-muted">ms</span>
+                      </>
+                    )}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+        </section>
+      )}
 
       <section>
         <h3 className="mb-2 text-[13px] font-semibold text-fg">Conversation</h3>
@@ -312,6 +330,17 @@ function CallDetail({ c }: { c: CallLogOut }) {
             ))}
           </ol>
         )}
+      </section>
+
+      <section>
+        <h3 className="mb-2 text-[13px] font-semibold text-fg">Token usage</h3>
+        <dl className="grid grid-cols-2 gap-x-6 gap-y-3 rounded-xl border border-line p-4 sm:grid-cols-4">
+          {USAGE.filter(([k]) => usage[k] !== undefined).map(([k, name, unit]) => (
+            <Fact key={k} name={name}>
+              {usage[k] < 0 ? 'n/a' : `${usage[k].toLocaleString()}${unit ? ` ${unit}` : ''}`}
+            </Fact>
+          ))}
+        </dl>
       </section>
 
       <details>

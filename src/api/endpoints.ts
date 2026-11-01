@@ -13,6 +13,9 @@ import type {
   ApiTokenOut,
   DeploymentSettings,
   WebCallToken,
+  ModelPrice,
+  OrgUsageDetail,
+  UsageOverview,
   DynamicMessageSettings,
   Environment,
   EnvironmentSummary,
@@ -316,4 +319,19 @@ export const webCallApi = {
   /** Public widget call: no auth, production config only, origin-checked. */
   publicToken: (id: string, body: { parent_origin: string | null; time_zone?: string; custom_variables?: Record<string, string> }) =>
     request<WebCallToken>(`/public/agents/${id}/web-call/token`, { method: 'POST', body, auth: false }),
+}
+
+export interface UsageQuery {
+  from?: string
+  to?: string
+  include_test?: boolean
+}
+
+/** Super Admin only: platform usage/cost (from the token_usage rollup) and per-model prices. */
+export const usageApi = {
+  overview: (q: UsageQuery) => api.get<UsageOverview>('/admin/usage', { ...q }),
+  organization: (orgId: string, q: UsageQuery) => api.get<OrgUsageDetail>(`/admin/usage/organizations/${orgId}`, { ...q }),
+  pricing: () => api.get<{ prices: ModelPrice[]; usd_to_inr: number | null }>('/admin/usage/pricing'),
+  saveRate: (usd_to_inr: number) => api.put<{ usd_to_inr: number }>('/admin/usage/settings', { usd_to_inr }),
+  savePrice: (body: ModelPrice) => api.put<ModelPrice>('/admin/usage/pricing', body),
 }
