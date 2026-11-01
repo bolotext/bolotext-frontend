@@ -14,6 +14,7 @@ import { Modal, useConfirm } from '@/components/ui/overlay'
 import { Badge, Card, CardHeader, EmptyState, ErrorState, Segmented, Skeleton } from '@/components/ui/primitives'
 import { Table, TableSkeleton, Td, Th, THead, Tr } from '@/components/ui/table'
 import { ApiError } from '@/api/client'
+import { useAuth } from '@/auth/AuthContext'
 import { toastError } from '../agents/helpers'
 
 const E164 = /^\+[1-9]\d{6,14}$/
@@ -22,6 +23,8 @@ const qk = ['telephony', 'admin'] as const
 type EditMode = 'form' | 'json'
 
 function TrunkModal({ kind, trunk, onClose }: { kind: TrunkKind; trunk: SipTrunk | null; onClose: () => void }) {
+  const { abilities } = useAuth()
+  const isSuperAdmin = abilities.role === 'SUPER_ADMIN'
   const qc = useQueryClient()
   const editing = Boolean(trunk)
   const [mode, setMode] = useState<EditMode>('form')
@@ -140,7 +143,7 @@ function TrunkModal({ kind, trunk, onClose }: { kind: TrunkKind; trunk: SipTrunk
                 />
                 <div className="flex items-center justify-between gap-3">
                   <p className="text-xs text-muted">
-                    Every field of the trunk, as LiveKit stores it (camelCase). sipTrunkId and the dates are read-only and ignored on save; fields you remove are cleared. The password is never shown: leave <code className="font-mono">authPassword</code> out to keep it, or add it to change it.
+                    Every field of the trunk, as LiveKit stores it (camelCase). sipTrunkId and the dates are read-only and ignored on save; fields you remove are cleared.{isSuperAdmin ? '' : ' metadata is read-only for Admins and is kept as is.'} The password is never shown: leave <code className="font-mono">authPassword</code> out to keep it, or add it to change it.
                   </p>
                   <Button
                     size="sm"
@@ -265,6 +268,8 @@ function TrunkTable({ kind, rows, loading, onEdit, onDelete }: { kind: TrunkKind
 }
 
 export default function TrunksPage() {
+  const { abilities } = useAuth()
+  const isSuperAdmin = abilities.role === 'SUPER_ADMIN'
   const qc = useQueryClient()
   const confirm = useConfirm()
   const q = useQuery({ queryKey: qk, queryFn: telephonyApi.adminList })
@@ -294,7 +299,11 @@ export default function TrunksPage() {
     <Page wide>
       <PageHeader
         title="Telephony"
-        description="Every SIP trunk and dispatch rule in the LiveKit project. Agents get theirs automatically from Deployment → Telephony; edit them here only for fixes. Super Admin only."
+        description={
+          isSuperAdmin
+            ? 'Every SIP trunk and dispatch rule in the LiveKit project. Agents get theirs automatically from Deployment → Telephony; edit them here only for fixes.'
+            : 'The SIP trunks and dispatch rules of your organization. Agents get theirs automatically from Deployment → Telephony; edit them here only for fixes. Shared trunks set up by the platform team are not listed.'
+        }
         actions={
           <>
             <Button onClick={() => setModal({ kind: 'inbound', trunk: null })}>

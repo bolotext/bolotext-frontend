@@ -95,7 +95,7 @@ export function abilitiesFor(role: Role | null): Abilities {
     viewUsage: role === 'SUPER_ADMIN',
     // GET /usage/me is for an organization's Admin only.
     viewOrgUsage: role === 'ADMIN',
-    // /admin/telephony/* (every trunk in the LiveKit project) is Super Admin only.
-    manageTelephony: role === 'SUPER_ADMIN',
+    // Trunk management: a Super Admin sees every trunk, an organization's Admin only their own organization's.
+    manageTelephony: role === 'SUPER_ADMIN' || role === 'ADMIN',
   }
 }
