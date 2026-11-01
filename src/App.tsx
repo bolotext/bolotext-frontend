@@ -142,6 +142,7 @@ export default function App() {
             }
           />
           <Route path="usage" element={<RequireAbility ability="viewUsage"><UsagePage /></RequireAbility>} />
+          <Route path="my-usage" element={<RequireAbility ability="viewOrgUsage"><OrgUsagePage /></RequireAbility>} />
           <Route path="usage/:orgId" element={<RequireAbility ability="viewUsage"><OrgUsagePage /></RequireAbility>} />
           <Route path="pricing" element={<RequireAbility ability="viewUsage"><PricingPage /></RequireAbility>} />
           <Route path="settings" element={<SettingsPage />} />

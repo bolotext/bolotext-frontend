@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { Download, FileSpreadsheet, TriangleAlert } from 'lucide-react'
+import { Download, Eye, EyeOff, FileSpreadsheet, TriangleAlert } from 'lucide-react'
 import { whatsappApi } from '@/api/endpoints'
 import { qk } from '@/api/queries'
 import type { WhatsAppField, WhatsAppUploadResult } from '@/api/types'
@@ -16,11 +16,48 @@ const MAX_BYTES = 5 * 1024 * 1024
 
 const SAMPLE_VALUE = { string: 'sample', number: '1500', long: '1500', boolean: 'yes', checkbox: 'yes', date: '2026-11-05' }
 
-function downloadSample(fields: WhatsAppField[], prefix: string) {
-  const columns = fields.map((f) => f.key)
+/** Two example rows for the agent's columns; shared by the on-screen template and the downloaded CSV. */
+function sampleRows(fields: WhatsAppField[]) {
   const row = (name: string, phone: string) =>
-    columns.map((c) => (c === 'full_name' ? name : c === 'phone_number' ? phone : SAMPLE_VALUE[fields.find((f) => f.key === c)!.type])).join(',')
-  const sample = [columns.join(','), row('Asha Verma', '9876543210'), row('Ravi Kumar', '+919812345678')].join('\n') + '\n'
+    fields.map((f) => (f.key === 'full_name' ? name : f.key === 'phone_number' ? phone : SAMPLE_VALUE[f.type]))
+  return [row('Asha Verma', '9876543210'), row('Ravi Kumar', '+919812345678')]
+}
+
+function TemplatePreview({ fields }: { fields: WhatsAppField[] }) {
+  return (
+    <div className="overflow-x-auto rounded-lg border border-line scrollbar-thin">
+      <table className="w-full border-collapse text-xs">
+        <thead className="bg-surface-2/60">
+          <tr>
+            {fields.map((f) => (
+              <th key={f.key} className="px-3 py-2 text-left align-top whitespace-nowrap">
+                <div className="font-mono font-medium text-fg">
+                  {f.key}
+                  {f.required && <span className="ml-0.5 text-danger" title="Required">*</span>}
+                </div>
+                <div className="font-normal text-muted">{f.type}{f.required ? ' · required' : ' · optional'}</div>
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {sampleRows(fields).map((r, i) => (
+            <tr key={i} className="border-t border-line text-muted">
+              {r.map((v, j) => (
+                <td key={j} className="px-3 py-1.5 font-mono whitespace-nowrap">
+                  {v}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+function downloadSample(fields: WhatsAppField[], prefix: string) {
+  const sample = [fields.map((f) => f.key).join(','), ...sampleRows(fields).map((r) => r.join(','))].join('\n') + '\n'
   const url = URL.createObjectURL(new Blob([sample], { type: 'text/csv' }))
   const a = Object.assign(document.createElement('a'), { href: url, download: `${prefix}-contacts-sample.csv` })
   a.click()
@@ -44,6 +81,7 @@ export function UploadModal({
   const ch = useChannel()
   const [file, setFile] = useState<{ name: string; text: string; rows: number } | null>(null)
   const [consent, setConsent] = useState(false)
+  const [showTemplate, setShowTemplate] = useState(false)
   const [result, setResult] = useState<WhatsAppUploadResult | null>(null)
 
   const pick = async (f: File | undefined) => {
@@ -72,6 +110,7 @@ export function UploadModal({
       setFile(null)
       setConsent(false)
       setResult(null)
+      setShowTemplate(false)
     }
     onOpenChange(v)
   }
@@ -120,9 +159,23 @@ export function UploadModal({
                 </>
               )}
             </button>
-            <Button size="sm" variant="ghost" onClick={() => downloadSample(fields, ch.channel)}>
-              <Download /> Download sample CSV
-            </Button>
+            <div className="flex flex-wrap items-center gap-1">
+              <Button size="sm" variant="ghost" onClick={() => setShowTemplate((v) => !v)}>
+                {showTemplate ? <EyeOff /> : <Eye />} {showTemplate ? 'Hide template' : 'View template'}
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => downloadSample(fields, ch.channel)}>
+                <Download /> Download sample CSV
+              </Button>
+            </div>
+            {showTemplate && (
+              <div className="space-y-1.5">
+                <TemplatePreview fields={fields} />
+                <p className="text-xs text-muted">
+                  The header row must match these column names exactly. <span className="text-danger">*</span> marks columns that must be filled in every row
+                  (set in Settings → Customer details).
+                </p>
+              </div>
+            )}
             <CheckRow
               checked={consent}
               onChange={(e) => setConsent(e.target.checked)}

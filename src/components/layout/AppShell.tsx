@@ -256,7 +256,7 @@ function SidebarContent() {
             Send an SMS
           </NavItem>
         )}
-        {(abilities.viewUsers || abilities.viewOrganizations || abilities.manageApiTokens || abilities.viewUsage) && (
+        {(abilities.viewUsers || abilities.viewOrganizations || abilities.manageApiTokens || abilities.viewUsage || abilities.viewOrgUsage) && (
           <div className="px-2.5 pt-5 pb-1.5 text-[11px] font-medium tracking-wide text-subtle uppercase">Manage</div>
         )}
         {abilities.viewUsers && (
@@ -272,6 +272,11 @@ function SidebarContent() {
         {abilities.manageApiTokens && (
           <NavItem to="/api-tokens" icon={<KeyRound />}>
             API tokens
+          </NavItem>
+        )}
+        {abilities.viewOrgUsage && (
+          <NavItem to="/my-usage" icon={<BarChart3 />}>
+            Usage
           </NavItem>
         )}
         {abilities.viewUsage && (

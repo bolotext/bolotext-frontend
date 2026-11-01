@@ -9,13 +9,17 @@ import { Table, TableSkeleton, Td, Th, THead, Tr } from '@/components/ui/table'
 import { DailyCostChart, FilterBar, KindCards, Money, type Filters } from './shared'
 
 export default function OrgUsagePage() {
-  const { orgId = '' } = useParams()
+  const { orgId } = useParams()
+  const mine = !orgId // /my-usage: an org Admin's own org, chosen by the server
   const [sp] = useSearchParams()
   const def = defaultRange(30)
   const [f, setF] = useState<Filters>({ from: sp.get('from') ?? def.from, to: sp.get('to') ?? def.to, test: sp.get('test') === '1' })
   const q = useQuery({
-    queryKey: ['usage', 'org', orgId, f],
-    queryFn: () => usageApi.organization(orgId, { from: f.from, to: f.to, include_test: f.test }),
+    queryKey: ['usage', 'org', orgId ?? 'mine', f],
+    queryFn: () =>
+      mine
+        ? usageApi.mine({ from: f.from, to: f.to, include_test: f.test })
+        : usageApi.organization(orgId, { from: f.from, to: f.to, include_test: f.test }),
   })
   const d = q.data
 
@@ -24,7 +28,7 @@ export default function OrgUsagePage() {
       <PageHeader
         title={d?.org_name ?? 'Organization usage'}
         description="Usage and cost for this organization, by provider model."
-        breadcrumbs={[{ label: 'Usage', to: '/usage' }, { label: d?.org_name ?? '…' }]}
+        breadcrumbs={mine ? undefined : [{ label: 'Usage', to: '/usage' }, { label: d?.org_name ?? '…' }]}
       />
       <FilterBar value={f} onChange={setF} />
       {q.error ? (
@@ -63,9 +67,13 @@ export default function OrgUsagePage() {
                       <Td className="text-muted">{usageLabel(m.kind, m.usage)}</Td>
                       <Td className="text-right">
                         {m.cost === null ? (
-                          <Link to="/pricing" className="text-warning hover:underline">
-                            Set price
-                          </Link>
+                          mine ? (
+                            <span className="text-warning">Not priced yet</span>
+                          ) : (
+                            <Link to="/pricing" className="text-warning hover:underline">
+                              Set price
+                            </Link>
+                          )
                         ) : (
                           <span className="font-medium"><Money usd={m.cost} rate={d.usd_to_inr} currency={d.currency} stacked /></span>
                         )}

@@ -13,7 +13,7 @@ import { DropdownContent, DropdownItem, DropdownMenu, DropdownTrigger, Modal, us
 import { Card, EmptyState, ErrorState, Switch } from '@/components/ui/primitives'
 import { Pager, Table, TableSkeleton, Td, Th, THead, Tr } from '@/components/ui/table'
 import { toastError } from '../agents/helpers'
-import { APPROVAL_STATUS, canSendWith, formatPhone, SOURCE_LABEL, useAgentFields, useDebounced, useWhatsAppConfig } from './helpers'
+import { APPROVAL_STATUS, canSendWith, fieldText, formatPhone, missingRequired, requiredFields, SOURCE_LABEL, useAgentFields, useDebounced, useWhatsAppConfig } from './helpers'
 import { Checkbox, CheckRow, SendStatusBadge } from './shared'
 import { useChannel } from './channel'
 import { UploadModal } from './UploadModal'
@@ -27,11 +27,13 @@ function ContactModal({ agentId, contact, onClose }: { agentId: string; contact:
   const [name, setName] = useState(editing?.customer_name ?? '')
   const [phone, setPhone] = useState(editing ? formatPhone(editing.phone_number) : '')
   const [optedOut, setOptedOut] = useState(editing?.opted_out ?? false)
-  const custom = useAgentFields(agentId).filter((f) => !f.locked)
+  const allFields = useAgentFields(agentId)
+  const custom = allFields.filter((f) => !f.locked)
   const [extra, setExtra] = useState<Record<string, string>>(() =>
     Object.fromEntries(Object.entries(editing?.data ?? {}).map(([k, v]) => [k, String(v ?? '').slice(0, typeof v === 'string' && /^\d{4}-\d\d-\d\dT/.test(v) ? 10 : undefined)])),
   )
 
+  const missing = missingRequired(extra, allFields)
   const save = useMutation({
     mutationFn: () => {
       const body = { customer_name: name.trim(), phone_number: phone.trim(), data: { ...Object.fromEntries(custom.filter((f) => f.type === 'checkbox').map((f) => [f.key, 'false'])), ...extra } }
@@ -55,17 +57,17 @@ function ContactModal({ agentId, contact, onClose }: { agentId: string; contact:
       footer={
         <>
           <Button onClick={onClose}>Cancel</Button>
-          <Button variant="primary" disabled={!name.trim() || !phone.trim()} loading={save.isPending} onClick={() => save.mutate()}>
+          <Button variant="primary" disabled={!name.trim() || !phone.trim() || missing.length > 0} loading={save.isPending} onClick={() => save.mutate()}>
             {editing ? 'Save changes' : 'Add contact'}
           </Button>
         </>
       }
     >
       <div className="space-y-4">
-        <Field label="Full name">
+        <Field label={<>Full name <span className="text-danger">*</span></>}>
           <Input autoFocus value={name} maxLength={200} onChange={(e) => setName(e.target.value)} />
         </Field>
-        <Field label="Phone number" hint="International format, e.g. +919876543210. A 10-digit number is treated as +91.">
+        <Field label={<>Phone number <span className="text-danger">*</span></>} hint="International format, e.g. +919876543210. A 10-digit number is treated as +91.">
           <Input value={phone} maxLength={32} onChange={(e) => setPhone(e.target.value)} inputMode="tel" />
         </Field>
         {custom.map((f) =>
@@ -75,7 +77,7 @@ function ContactModal({ agentId, contact, onClose }: { agentId: string; contact:
               {f.key}
             </label>
           ) : (
-            <Field key={f.key} label={f.key} hint={f.required ? 'Required' : undefined}>
+            <Field key={f.key} label={<>{f.key}{f.required && <span className="ml-0.5 text-danger">*</span>}</>} hint={f.required ? 'Required' : undefined}>
               {f.type === 'boolean' ? (
                 <Select value={extra[f.key] ?? ''} onChange={(e) => setExtra({ ...extra, [f.key]: e.target.value })}>
                   <option value="">—</option>
@@ -110,6 +112,7 @@ function ContactModal({ agentId, contact, onClose }: { agentId: string; contact:
 // ---------------------------------------------------------------- send
 function SendModal({
   agentId,
+  rows,
   selected,
   batchId,
   batchName,
@@ -117,6 +120,7 @@ function SendModal({
   onSent,
 }: {
   agentId: string
+  rows: WhatsAppContactOut[]
   selected: string[]
   batchId: string | null
   batchName: string | null
@@ -132,6 +136,15 @@ function SendModal({
   const [scope, setScope] = useState<'selected' | 'batch'>(selected.length ? 'selected' : 'batch')
   const [templateId, setTemplateId] = useState('')
   const [consent, setConsent] = useState(false)
+  const fields = useAgentFields(agentId)
+  const required = requiredFields(fields)
+  const inBatch = useQuery({
+    queryKey: [...qk.wa.contacts(agentId), 'send-preview', batchId],
+    queryFn: () => whatsappApi.listContacts(agentId, { batch_id: batchId!, status: 'pending', skip: 0, limit: 5 }),
+    enabled: scope === 'batch' && Boolean(batchId),
+  })
+  const preview = scope === 'selected' ? rows.filter((r) => selected.includes(r.id)).slice(0, 5) : (inBatch.data?.items ?? [])
+  const previewTotal = scope === 'selected' ? selected.length : (inBatch.data?.total ?? 0)
 
   const send = useMutation({
     mutationFn: () =>
@@ -187,6 +200,47 @@ function SendModal({
             </label>
           </div>
         </Field>
+        {preview.length > 0 && (
+          <div>
+            <div className="mb-1.5 text-[13px] font-medium text-fg">Customer details</div>
+            <div className="overflow-x-auto rounded-lg border border-line scrollbar-thin">
+              <table className="w-full border-collapse text-xs">
+                <thead className="bg-surface-2/60 text-muted">
+                  <tr>
+                    <th className="px-3 py-1.5 text-left font-medium">Customer</th>
+                    <th className="px-3 py-1.5 text-left font-medium">Phone</th>
+                    {required.map((f) => (
+                      <th key={f.key} className="px-3 py-1.5 text-left font-mono font-medium whitespace-nowrap">
+                        {f.key}
+                        <span className="ml-0.5 text-danger">*</span>
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {preview.map((c) => (
+                    <tr key={c.id} className="border-t border-line">
+                      <td className="px-3 py-1.5 whitespace-nowrap text-fg">{c.customer_name}</td>
+                      <td className="px-3 py-1.5 font-mono whitespace-nowrap text-muted">{formatPhone(c.phone_number)}</td>
+                      {required.map((f) => {
+                        const v = fieldText(c.data[f.key], f.type)
+                        return (
+                          <td key={f.key} className={cn('px-3 py-1.5 whitespace-nowrap', v === null ? 'text-warning' : 'text-muted')}>
+                            {v ?? 'missing'}
+                          </td>
+                        )
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {previewTotal > preview.length && <p className="mt-1 text-xs text-subtle">Showing {preview.length} of {previewTotal}.</p>}
+            {preview.some((c) => missingRequired(c.data, fields).length > 0) && (
+              <p className="mt-1 text-xs text-warning">Some contacts are missing required details; their messages may fail or have empty placeholders.</p>
+            )}
+          </div>
+        )}
         <Field
           label="Message"
           hint={
@@ -278,6 +332,8 @@ export function ContactsTab({ agentId, canWrite }: { agentId: string; canWrite: 
   })
 
   const rows = useMemo(() => contacts.data?.items ?? [], [contacts.data])
+  const fields = useAgentFields(agentId)
+  const required = requiredFields(fields)
   const total = contacts.data?.total ?? 0
   const allOnPage = rows.length > 0 && rows.every((r) => selected.has(r.id))
   const batch = batches.data?.find((b) => b.id === batchId)
@@ -470,13 +526,18 @@ export function ContactsTab({ agentId, canWrite }: { agentId: string; canWrite: 
                 </Th>
                 <Th>Customer</Th>
                 <Th>Phone</Th>
+                {required.map((f) => (
+                  <Th key={f.key} className="font-mono">
+                    {f.key}
+                  </Th>
+                ))}
                 <Th className="hidden lg:table-cell">Message</Th>
                 <Th>Status</Th>
                 <Th className="w-10" />
               </tr>
             </THead>
             {contacts.isLoading ? (
-              <TableSkeleton cols={6} />
+              <TableSkeleton cols={6 + required.length} />
             ) : (
               <tbody className={cn(contacts.isPlaceholderData && 'opacity-60')}>
                 {rows.map((c) => (
@@ -486,6 +547,14 @@ export function ContactsTab({ agentId, canWrite }: { agentId: string; canWrite: 
                     </Td>
                     <Td className="font-medium">{c.customer_name}</Td>
                     <Td className="font-mono text-xs text-muted">{formatPhone(c.phone_number)}</Td>
+                    {required.map((f) => {
+                      const v = fieldText(c.data[f.key], f.type)
+                      return (
+                        <Td key={f.key} className={cn('max-w-40 truncate', v === null ? 'text-warning' : 'text-muted')} title={v ?? 'Missing required value'}>
+                          {v ?? 'missing'}
+                        </Td>
+                      )
+                    })}
                     <Td className="hidden max-w-xs lg:table-cell">
                       <div className="truncate text-xs text-muted" title={c.message}>
                         {c.message}
@@ -535,6 +604,7 @@ export function ContactsTab({ agentId, canWrite }: { agentId: string; canWrite: 
       {sendOpen && (
         <SendModal
           agentId={agentId}
+          rows={rows}
           selected={[...selected]}
           batchId={batchId || null}
           batchName={batch?.filename ?? null}

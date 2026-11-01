@@ -108,3 +108,18 @@ export const SOURCE_LABEL = { bolotext: 'Created in Bolotext', twilio: 'From Twi
 /** Mirrors the backend: SMS templates are always sendable; WhatsApp ones must be approved (Twilio-linked ones unless rejected). */
 export const canSendWith = (t: WhatsAppTemplateOut, sms = false) =>
   sms || (Boolean(t.twilio_content_sid) && (t.approval_status === 'approved' || (t.source === 'twilio' && t.approval_status !== 'rejected')))
+
+/** Fields marked required in Settings → Customer details, beyond the always-present name and phone. */
+export const requiredFields = (fields: WhatsAppField[]) => fields.filter((f) => f.required && !f.locked)
+
+/** A stored custom value as plain text for a table cell; null when nothing was stored. */
+export function fieldText(value: unknown, type: WhatsAppFieldType): string | null {
+  if (value === undefined || value === null || value === '') return null
+  if (type === 'boolean' || type === 'checkbox') return value === true || value === 'true' ? 'Yes' : 'No'
+  if (type === 'date' && typeof value === 'string') return value.slice(0, 10)
+  return String(value)
+}
+
+/** The required custom fields this contact has no value for. */
+export const missingRequired = (data: Record<string, unknown>, fields: WhatsAppField[]) =>
+  requiredFields(fields).filter((f) => f.type !== 'checkbox' && fieldText(data[f.key], f.type) === null)

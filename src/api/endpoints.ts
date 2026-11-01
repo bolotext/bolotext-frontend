@@ -331,6 +331,8 @@ export interface UsageQuery {
 export const usageApi = {
   overview: (q: UsageQuery) => api.get<UsageOverview>('/admin/usage', { ...q }),
   organization: (orgId: string, q: UsageQuery) => api.get<OrgUsageDetail>(`/admin/usage/organizations/${orgId}`, { ...q }),
+  /** An organization Admin's own org (the server picks the org; there is no id to pass). */
+  mine: (q: UsageQuery) => api.get<OrgUsageDetail>('/usage/me', { ...q }),
   pricing: () => api.get<{ prices: ModelPrice[]; usd_to_inr: number | null }>('/admin/usage/pricing'),
   saveRate: (usd_to_inr: number) => api.put<{ usd_to_inr: number }>('/admin/usage/settings', { usd_to_inr }),
   savePrice: (body: ModelPrice) => api.put<ModelPrice>('/admin/usage/pricing', body),
