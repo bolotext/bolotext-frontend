@@ -649,3 +649,13 @@ export interface CallLogInteraction {
 export interface CallLogOut extends CallLogSummary {
   interaction: CallLogInteraction
 }
+
+/** LiveKit connection details for a browser voice call. Agent id, environment
+ * and custom variables are embedded in the token's participant metadata. */
+export interface WebCallToken {
+  server_url: string
+  participant_token: string
+  room_name: string
+  agent_id: string
+  environment: Environment
+}

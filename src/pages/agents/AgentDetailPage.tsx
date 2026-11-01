@@ -65,6 +65,7 @@ import AnalyticsTab from './builder/AnalyticsTab'
 import CallHandlingTab from './builder/CallHandlingTab'
 import DeploymentTab from './builder/DeploymentTab'
 import TestTab from './builder/TestTab'
+import { TestCallButton } from './builder/TestCallButton'
 import VersionsTab from './builder/VersionsTab'
 import AccessTab from './builder/AccessTab'
 import CallLogsTab from './builder/CallLogsTab'
@@ -458,6 +459,8 @@ function AgentHeader({
               })}
             </DropdownContent>
           </DropdownMenu>
+
+          <TestCallButton agentId={agentId} env={env} />
 
           {abilities.promoteAgent && env !== 'production' && (
             <Button
