@@ -135,6 +135,14 @@ export default function DeploymentTab() {
                   validate={(v) => (ORIGIN.test(v) ? null : 'Use an origin like https://app.example.com (no path)')}
                 />
               </SettingRow>
+              <SettingRow
+                title="Embed snippet"
+                description="Voice widget for your site (uses the production config). Optional data-metadata keys reach the agent as custom variables. Save and promote to production first."
+              >
+                <pre className="overflow-x-auto rounded-lg border border-line bg-surface-2/60 p-3 font-mono text-xs whitespace-pre-wrap">
+                  {`<script src="${window.location.origin}/embed.js"\n  data-agent-id="${agent.id}"\n  data-metadata='{"plan":"pro"}'></script>`}
+                </pre>
+              </SettingRow>
             </ToggleRow>
           </CardBody>
         </Card>

@@ -12,6 +12,7 @@ import type {
   ApiTokenCreated,
   ApiTokenOut,
   DeploymentSettings,
+  WebCallToken,
   DynamicMessageSettings,
   Environment,
   EnvironmentSummary,
@@ -304,4 +305,15 @@ export const whatsappApi = {
     api.post<number>(`/whatsapp/agents/${id}/contacts/bulk-delete`, { contact_ids }),
   // send
   send: (id: string, body: WhatsAppSendRequest) => api.post<WhatsAppSendResult>(`/whatsapp/agents/${id}/send`, body),
+}
+
+/** Browser voice calls. The agent is chosen by id; everything else the voice
+ * agent needs travels in the participant metadata the backend bakes into the token. */
+export const webCallApi = {
+  /** Signed-in builder test call (any environment). */
+  token: (id: string, body: { environment: Environment; time_zone?: string; custom_variables?: Record<string, string> }) =>
+    api.post<WebCallToken>(`/agents/${id}/web-call/token`, body),
+  /** Public widget call: no auth, production config only, origin-checked. */
+  publicToken: (id: string, body: { parent_origin: string | null; time_zone?: string; custom_variables?: Record<string, string> }) =>
+    request<WebCallToken>(`/public/agents/${id}/web-call/token`, { method: 'POST', body, auth: false }),
 }

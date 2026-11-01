@@ -22,6 +22,7 @@ const UsersPage = lazy(() => import('@/pages/UsersPage'))
 const ApiTokensPage = lazy(() => import('@/pages/ApiTokensPage'))
 const OrganizationsPage = lazy(() => import('@/pages/organizations/OrganizationsPage'))
 const OrganizationDetailPage = lazy(() => import('@/pages/organizations/OrganizationDetailPage'))
+const EmbedPage = lazy(() => import('@/pages/embed/EmbedPage'))
 const SettingsPage = lazy(() => import('@/pages/SettingsPage'))
 
 function FullScreenSpinner() {
@@ -88,6 +89,8 @@ export default function App() {
     <Suspense fallback={<FullScreenSpinner />}>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        {/* Public, iframe-able voice widget (see public/embed.js). */}
+        <Route path="/embed/:agentId" element={<EmbedPage />} />
         <Route
           element={
             <RequireAuth>
