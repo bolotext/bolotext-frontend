@@ -808,3 +808,34 @@ export interface SipTrunkBody {
   auth_password?: string | null
   allowed_addresses?: string[]
 }
+
+// ---------- Rent a number (LiveKit Phone Numbers) ----------
+export interface NumberSearchResult {
+  phone_number: string
+  country_code: string | null
+  area_code: string | null
+  number_type: string
+  locality: string | null
+  region: string | null
+  capabilities: string[]
+}
+
+export interface RentedNumber {
+  id: string
+  phone_number: string
+  number_type: string
+  locality: string | null
+  region: string | null
+  status: string
+  agent_id: string | null
+  org_id: string | null
+  org_name: string | null
+  external: boolean
+  dispatch_rule_ids: string[]
+  warning: string | null
+}
+
+export interface RentedNumberList {
+  items: RentedNumber[]
+  limit_per_org: number | null
+}

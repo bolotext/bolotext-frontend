@@ -1,8 +1,8 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { Braces, Cable, Check, Copy, Pencil, Plus, Trash2 } from 'lucide-react'
+import { Braces, Cable, Check, Copy, Hash, Pencil, Plus, Trash2 } from 'lucide-react'
 import { telephonyApi } from '@/api/endpoints'
 import type { SipDispatchRule, SipTrunk, SipTrunkBody, TrunkKind } from '@/api/types'
 import { copyToClipboard } from '@/lib/utils'
@@ -16,11 +16,13 @@ import { Table, TableSkeleton, Td, Th, THead, Tr } from '@/components/ui/table'
 import { ApiError } from '@/api/client'
 import { useAuth } from '@/auth/AuthContext'
 import { toastError } from '../agents/helpers'
+import { NumbersTab } from './NumbersTab'
 
 const E164 = /^\+[1-9]\d{6,14}$/
 const qk = ['telephony', 'admin'] as const
 
 type EditMode = 'form' | 'json'
+type Tab = 'trunks' | 'numbers'
 
 function TrunkModal({ kind, trunk, onClose }: { kind: TrunkKind; trunk: SipTrunk | null; onClose: () => void }) {
   const { abilities } = useAuth()
@@ -270,6 +272,8 @@ function TrunkTable({ kind, rows, loading, onEdit, onDelete }: { kind: TrunkKind
 export default function TrunksPage() {
   const { abilities } = useAuth()
   const isSuperAdmin = abilities.role === 'SUPER_ADMIN'
+  const [params, setParams] = useSearchParams()
+  const tab: Tab = params.get('tab') === 'numbers' ? 'numbers' : 'trunks'
   const qc = useQueryClient()
   const confirm = useConfirm()
   const q = useQuery({ queryKey: qk, queryFn: telephonyApi.adminList })
@@ -300,21 +304,38 @@ export default function TrunksPage() {
       <PageHeader
         title="Telephony"
         description={
-          isSuperAdmin
-            ? 'Every SIP trunk and dispatch rule in the LiveKit project. Agents get theirs automatically from Deployment → Telephony; edit them here only for fixes.'
-            : 'The SIP trunks and dispatch rules of your organization. Agents get theirs automatically from Deployment → Telephony; edit them here only for fixes. Shared trunks set up by the platform team are not listed.'
+          tab === 'numbers'
+            ? 'Rent a phone number from LiveKit and connect it to an agent, without a SIP provider.'
+            : isSuperAdmin
+              ? 'Every SIP trunk and dispatch rule in the LiveKit project. Agents get theirs automatically from Deployment → Telephony; edit them here only for fixes.'
+              : 'The SIP trunks and dispatch rules of your organization. Agents get theirs automatically from Deployment → Telephony; edit them here only for fixes. Shared trunks set up by the platform team are not listed.'
         }
         actions={
-          <>
-            <Button onClick={() => setModal({ kind: 'inbound', trunk: null })}>
-              <Plus /> Inbound trunk
-            </Button>
-            <Button variant="primary" onClick={() => setModal({ kind: 'outbound', trunk: null })}>
-              <Plus /> Outbound trunk
-            </Button>
-          </>
+          tab === 'trunks' && (
+            <>
+              <Button onClick={() => setModal({ kind: 'inbound', trunk: null })}>
+                <Plus /> Inbound trunk
+              </Button>
+              <Button variant="primary" onClick={() => setModal({ kind: 'outbound', trunk: null })}>
+                <Plus /> Outbound trunk
+              </Button>
+            </>
+          )
         }
       />
+      <Segmented<Tab>
+        className="mb-6"
+        value={tab}
+        onChange={(t) => setParams(t === 'trunks' ? {} : { tab: t }, { replace: true })}
+        options={[
+          { value: 'trunks', label: <span className="flex items-center gap-1.5"><Cable className="size-3.5" /> SIP trunks</span> },
+          { value: 'numbers', label: <span className="flex items-center gap-1.5"><Hash className="size-3.5" /> Phone numbers</span> },
+        ]}
+      />
+      {tab === 'numbers' ? (
+        <NumbersTab />
+      ) : (
+        <>
       {d?.origination_uri && (
         <div className="mb-6 flex flex-wrap items-center gap-3 rounded-xl border border-line px-4 py-3 text-[13px]">
           <span className="text-muted">Origination SIP URI</span>
@@ -385,6 +406,8 @@ export default function TrunksPage() {
             )}
           </Card>
         </div>
+      )}
+        </>
       )}
       {modal && <TrunkModal key={`${modal.kind}-${modal.trunk?.id ?? 'new'}`} kind={modal.kind} trunk={modal.trunk} onClose={() => setModal(null)} />}
     </Page>

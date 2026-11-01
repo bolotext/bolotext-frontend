@@ -14,6 +14,9 @@ import type {
   DeploymentSettings,
   WebCallToken,
   AvailableTrunk,
+  NumberSearchResult,
+  RentedNumber,
+  RentedNumberList,
   SipTrunk,
   SipTrunkBody,
   SipTrunkList,
@@ -363,5 +366,11 @@ export const telephonyApi = {
   /** The trunk as LiveKit JSON (camelCase, no read-only fields or password) for the JSON editor. */
   adminGetRaw: (kind: TrunkKind, id: string) => api.get<{ trunk: Record<string, unknown> }>(`/admin/telephony/trunks/${kind}/${id}/raw`),
   adminPutRaw: (kind: TrunkKind, id: string, trunk: Record<string, unknown>) => api.put<SipTrunk>(`/admin/telephony/trunks/${kind}/${id}/raw`, { trunk }),
+  // Rent a number from LiveKit (US, inbound). No SIP trunk or credentials involved.
+  numbersSearch: (area_code: string) => api.get<NumberSearchResult[]>('/telephony/numbers/search', { area_code, limit: 20 }),
+  numbersList: () => api.get<RentedNumberList>('/telephony/numbers'),
+  numbersRent: (body: { phone_number: string; agent_id: string | null; billing_confirmed: boolean }) => api.post<RentedNumber>('/telephony/numbers', body),
+  numbersAssign: (id: string, agent_id: string | null) => api.put<RentedNumber>(`/telephony/numbers/${encodeURIComponent(id)}/agent`, { agent_id }),
+  numbersRelease: (id: string) => api.del<{ id: string }>(`/telephony/numbers/${encodeURIComponent(id)}`),
   adminDelete: (kind: TrunkKind | 'dispatch-rule', id: string) => api.del<{ id: string }>(`/admin/telephony/trunks/${kind}/${id}`),
 }
