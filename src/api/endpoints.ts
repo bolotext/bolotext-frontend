@@ -13,6 +13,13 @@ import type {
   ApiTokenOut,
   DeploymentSettings,
   WebCallToken,
+  AvailableTrunk,
+  SipTrunk,
+  SipTrunkBody,
+  SipTrunkList,
+  TelephonyConnectBody,
+  TelephonyState,
+  TrunkKind,
   ModelPrice,
   OrgUsageDetail,
   UsageOverview,
@@ -336,4 +343,25 @@ export const usageApi = {
   pricing: () => api.get<{ prices: ModelPrice[]; usd_to_inr: number | null }>('/admin/usage/pricing'),
   saveRate: (usd_to_inr: number) => api.put<{ usd_to_inr: number }>('/admin/usage/settings', { usd_to_inr }),
   savePrice: (body: ModelPrice) => api.put<ModelPrice>('/admin/usage/pricing', body),
+}
+
+/** Phone calls over SIP trunks managed in LiveKit. Per-agent routes need edit access to the agent; `admin*` are Super Admin only. */
+export const telephonyApi = {
+  get: (id: string) => api.get<TelephonyState>(`/agents/${id}/telephony`),
+  connect: (id: string, body: TelephonyConnectBody) => api.put<TelephonyState>(`/agents/${id}/telephony`, body),
+  disconnect: (id: string) => api.del<TelephonyState>(`/agents/${id}/telephony`),
+  availableTrunks: (id: string) => api.get<AvailableTrunk[]>(`/agents/${id}/telephony/trunks`),
+  useTrunk: (id: string, trunk_id: string) => api.post<TelephonyState>(`/agents/${id}/telephony/use-trunk`, { trunk_id }),
+  /** `numbers`: a different inbound number, for when the saved ones already answer inbound for another agent. */
+  enableInbound: (id: string, numbers?: string[]) => api.post<TelephonyState>(`/agents/${id}/telephony/inbound`, numbers?.length ? { numbers } : undefined),
+  disableInbound: (id: string) => api.del<TelephonyState>(`/agents/${id}/telephony/inbound`),
+  call: (id: string, body: { phone_number: string; environment: Environment; consent_confirmed: boolean }) =>
+    api.post<{ room_name: string; sip_call_id: string }>(`/agents/${id}/telephony/call`, body),
+  adminList: () => api.get<SipTrunkList>('/admin/telephony/trunks'),
+  adminCreate: (kind: TrunkKind, body: SipTrunkBody) => api.post<SipTrunk>(`/admin/telephony/trunks/${kind}`, body),
+  adminUpdate: (kind: TrunkKind, id: string, body: Partial<SipTrunkBody>) => api.patch<SipTrunk>(`/admin/telephony/trunks/${kind}/${id}`, body),
+  /** The trunk as LiveKit JSON (camelCase, no read-only fields or password) for the JSON editor. */
+  adminGetRaw: (kind: TrunkKind, id: string) => api.get<{ trunk: Record<string, unknown> }>(`/admin/telephony/trunks/${kind}/${id}/raw`),
+  adminPutRaw: (kind: TrunkKind, id: string, trunk: Record<string, unknown>) => api.put<SipTrunk>(`/admin/telephony/trunks/${kind}/${id}/raw`, { trunk }),
+  adminDelete: (kind: TrunkKind | 'dispatch-rule', id: string) => api.del<{ id: string }>(`/admin/telephony/trunks/${kind}/${id}`),
 }

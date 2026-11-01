@@ -14,6 +14,8 @@ import {
   Volume2,
   Wrench,
 } from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
+import { telephonyApi } from '@/api/endpoints'
 import { useEnvironments, useProviders, useUserDirectory } from '@/api/queries'
 import type { AgentOut, Environment, ProviderInfo } from '@/api/types'
 import { cn, formatDate, timeAgo } from '@/lib/utils'
@@ -103,6 +105,7 @@ export default function OverviewTab() {
   const { data: providers } = useProviders()
   const { data: envs, isLoading: envLoading } = useEnvironments(agent.id)
   const { map: users } = useUserDirectory()
+  const { data: tel } = useQuery({ queryKey: ['telephony', agent.id], queryFn: () => telephonyApi.get(agent.id) })
   const base = `/agents/${agent.id}`
 
   const checks = readinessChecks(agent)
@@ -113,8 +116,8 @@ export default function OverviewTab() {
   const toolCount =
     agent.actions.actions.length + agent.mcp.servers.length + (agent.prompt.dynamic_message.dynamic_message_enabled ? 1 : 0)
   const channels = [
-    agent.deployment.inbound_calling_enabled && 'Inbound',
-    agent.deployment.outbound_calling_enabled && 'Outbound',
+    tel?.inbound_enabled && 'Inbound',
+    tel?.connected && tel.outbound_enabled && 'Outbound',
     agent.deployment.chat_widget_enabled && 'Chat widget',
   ].filter(Boolean)
 

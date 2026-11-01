@@ -18,6 +18,7 @@ import {
   Users,
   KeyRound,
   BarChart3,
+  Cable,
   BadgeDollarSign,
   X,
   Smartphone,
@@ -256,7 +257,7 @@ function SidebarContent() {
             Send an SMS
           </NavItem>
         )}
-        {(abilities.viewUsers || abilities.viewOrganizations || abilities.manageApiTokens || abilities.viewUsage || abilities.viewOrgUsage) && (
+        {(abilities.viewUsers || abilities.viewOrganizations || abilities.manageApiTokens || abilities.viewUsage || abilities.viewOrgUsage || abilities.manageTelephony) && (
           <div className="px-2.5 pt-5 pb-1.5 text-[11px] font-medium tracking-wide text-subtle uppercase">Manage</div>
         )}
         {abilities.viewUsers && (
@@ -272,6 +273,11 @@ function SidebarContent() {
         {abilities.manageApiTokens && (
           <NavItem to="/api-tokens" icon={<KeyRound />}>
             API tokens
+          </NavItem>
+        )}
+        {abilities.manageTelephony && (
+          <NavItem to="/telephony" icon={<Cable />}>
+            Telephony
           </NavItem>
         )}
         {abilities.viewOrgUsage && (

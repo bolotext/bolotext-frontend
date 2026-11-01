@@ -734,3 +734,77 @@ export interface ModelPrice {
   per_million_chars: number | null
   priced?: boolean
 }
+
+// ---------- Telephony (SIP trunks via LiveKit) ----------
+export interface TelephonyState {
+  connected: boolean
+  origination_uri: string | null
+  termination_uri: string | null
+  auth_username: string | null
+  numbers: string[]
+  outbound_enabled: boolean
+  inbound_enabled: boolean
+  inbound_numbers: string[]
+  outbound_trunk_id: string | null
+  outbound_trunk_shared: boolean
+  inbound_trunk_id: string | null
+  dispatch_rule_id: string | null
+  updated_at: string | null
+}
+
+export interface TelephonyConnectBody {
+  termination_uri: string
+  auth_username: string | null
+  auth_password: string | null
+  numbers: string[]
+}
+
+export interface AvailableTrunk {
+  id: string
+  name: string
+  address: string | null
+  numbers: string[]
+  transport: string | null
+  linked: boolean
+  shared_with: number
+  usable: boolean
+}
+
+export type TrunkKind = 'outbound' | 'inbound'
+
+export interface SipTrunk {
+  id: string
+  kind: TrunkKind
+  name: string
+  address: string | null
+  numbers: string[]
+  auth_username: string | null
+  allowed_addresses: string[]
+  transport: string | null
+  agent_id: string | null
+}
+
+export interface SipDispatchRule {
+  id: string
+  name: string
+  trunk_ids: string[]
+  room_prefix: string | null
+  metadata: string | null
+  agent_id: string | null
+}
+
+export interface SipTrunkList {
+  origination_uri: string | null
+  outbound: SipTrunk[]
+  inbound: SipTrunk[]
+  dispatch_rules: SipDispatchRule[]
+}
+
+export interface SipTrunkBody {
+  name: string
+  address?: string | null
+  numbers: string[]
+  auth_username?: string | null
+  auth_password?: string | null
+  allowed_addresses?: string[]
+}

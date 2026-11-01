@@ -26,6 +26,7 @@ const EmbedPage = lazy(() => import('@/pages/embed/EmbedPage'))
 const UsagePage = lazy(() => import('@/pages/usage/UsagePage'))
 const OrgUsagePage = lazy(() => import('@/pages/usage/OrgUsagePage'))
 const PricingPage = lazy(() => import('@/pages/usage/PricingPage'))
+const TrunksPage = lazy(() => import('@/pages/telephony/TrunksPage'))
 const SettingsPage = lazy(() => import('@/pages/SettingsPage'))
 
 function FullScreenSpinner() {
@@ -142,6 +143,7 @@ export default function App() {
             }
           />
           <Route path="usage" element={<RequireAbility ability="viewUsage"><UsagePage /></RequireAbility>} />
+          <Route path="telephony" element={<RequireAbility ability="manageTelephony"><TrunksPage /></RequireAbility>} />
           <Route path="my-usage" element={<RequireAbility ability="viewOrgUsage"><OrgUsagePage /></RequireAbility>} />
           <Route path="usage/:orgId" element={<RequireAbility ability="viewUsage"><OrgUsagePage /></RequireAbility>} />
           <Route path="pricing" element={<RequireAbility ability="viewUsage"><PricingPage /></RequireAbility>} />

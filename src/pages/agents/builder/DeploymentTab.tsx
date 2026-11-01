@@ -1,18 +1,20 @@
-import { ArrowRight, Globe, MessageSquare, PhoneIncoming, PhoneOutgoing } from 'lucide-react'
+import { ArrowRight, Globe, MessageSquare, PhoneOutgoing } from 'lucide-react'
 import { agentsApi } from '@/api/endpoints'
+import { useAuth } from '@/auth/AuthContext'
 import { useEnvironments } from '@/api/queries'
 import type { Environment } from '@/api/types'
 import { cn, formatDate, timeAgo } from '@/lib/utils'
-import { Input } from '@/components/ui/input'
 import { TagInput } from '@/components/ui/editors'
 import { Badge, Card, CardBody, CardHeader, Skeleton, ToggleRow } from '@/components/ui/primitives'
 import { ENV_META } from '../helpers'
+import { TelephonyPanel } from './TelephonyPanel'
 import { SaveBar, SectionTitle, SettingRow, useBuilder, useDraft, useSave } from './context'
 
 const ORIGIN = /^https?:\/\/[^/\s]+$/i
 
 export default function DeploymentTab() {
-  const { agent, readOnly } = useBuilder()
+  const { agent, env, readOnly } = useBuilder()
+  const { abilities } = useAuth()
   const { draft, patch, dirty, reset } = useDraft(agent.deployment)
   const { save, saving } = useSave()
   const { data: envs, isLoading } = useEnvironments(agent.id)
@@ -65,39 +67,23 @@ export default function DeploymentTab() {
             title="Telephony"
             description={voice ? undefined : 'Voice isn’t enabled as a channel on the General tab.'}
           />
-          <CardBody className="divide-y divide-line">
-            <ToggleRow
-              title={
-                <span className="flex items-center gap-2">
-                  <PhoneIncoming className="size-4 text-muted" /> Inbound calls
-                </span>
-              }
-              description="Answer calls to a phone number."
-              checked={draft.inbound_calling_enabled}
-              onCheckedChange={(inbound_calling_enabled) => patch({ inbound_calling_enabled })}
-              disabled={readOnly}
-            >
-              <SettingRow title="Inbound number" description="Number this agent answers on.">
-                <Input
-                  value={draft.inbound_number ?? ''}
-                  onChange={(e) => patch({ inbound_number: e.target.value || null })}
-                  readOnly={readOnly}
-                  className="font-mono"
-                  placeholder="+91XXXXXXXXXX"
-                />
-              </SettingRow>
-            </ToggleRow>
-            <ToggleRow
-              title={
-                <span className="flex items-center gap-2">
-                  <PhoneOutgoing className="size-4 text-muted" /> Outbound calls
-                </span>
-              }
-              description="Allow this agent to place outbound calls. Outbound campaigns must follow TRAI consent/DND rules."
-              checked={draft.outbound_calling_enabled}
-              onCheckedChange={(outbound_calling_enabled) => patch({ outbound_calling_enabled })}
-              disabled={readOnly}
-            />
+          <CardBody>
+            <TelephonyPanel agentId={agent.id} env={env} canManage={abilities.editAgents} />
+            <div className="divide-y divide-line">
+            {env !== 'production' && (
+              <ToggleRow
+                title={
+                  <span className="flex items-center gap-2">
+                    <PhoneOutgoing className="size-4 text-muted" /> Outbound calls
+                  </span>
+                }
+                description="Allow this agent to place outbound calls. Outbound campaigns must follow TRAI consent/DND rules."
+                checked={draft.outbound_calling_enabled}
+                onCheckedChange={(outbound_calling_enabled) => patch({ outbound_calling_enabled })}
+                disabled={readOnly}
+              />
+            )}
+            </div>
           </CardBody>
         </Card>
 

@@ -70,6 +70,7 @@ export interface Abilities {
   manageApiTokens: boolean
   viewUsage: boolean
   viewOrgUsage: boolean
+  manageTelephony: boolean
 }
 
 export function abilitiesFor(role: Role | null): Abilities {
@@ -94,5 +95,7 @@ export function abilitiesFor(role: Role | null): Abilities {
     viewUsage: role === 'SUPER_ADMIN',
     // GET /usage/me is for an organization's Admin only.
     viewOrgUsage: role === 'ADMIN',
+    // /admin/telephony/* (every trunk in the LiveKit project) is Super Admin only.
+    manageTelephony: role === 'SUPER_ADMIN',
   }
 }

@@ -3,6 +3,7 @@ import { ArrowLeft, Globe, Phone, Smartphone } from 'lucide-react'
 import { webCallApi } from '@/api/endpoints'
 import type { Environment } from '@/api/types'
 import { VoiceCall } from '@/components/voice/VoiceCall'
+import { PhoneCallForm } from './PhoneCallForm'
 import { Button } from '@/components/ui/button'
 import { Drawer } from '@/components/ui/overlay'
 import { ENV_META, toastError } from '../helpers'
@@ -70,7 +71,7 @@ export function TestCallButton({ agentId, env }: { agentId: string; env: Environ
                 />
               </div>
             ) : (
-              <div />
+              <PhoneCallForm agentId={agentId} env={env} />
             )}
           </>
         )}
