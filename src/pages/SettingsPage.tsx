@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { Monitor, Moon, Palette, Sun, UserRound } from 'lucide-react'
+import { KeyRound, Monitor, Moon, Palette, Sun, UserRound } from 'lucide-react'
 import { useAuth } from '@/auth/AuthContext'
 import { usersApi } from '@/api/endpoints'
 import { ROLE_LABEL } from '@/lib/permissions'
@@ -9,7 +9,7 @@ import { formatDate } from '@/lib/utils'
 import { useTheme, type ThemePref } from '@/lib/theme'
 import { Page, PageHeader } from '@/components/layout/Page'
 import { Button } from '@/components/ui/button'
-import { Field, Input } from '@/components/ui/input'
+import { Field, Input, SecretInput } from '@/components/ui/input'
 import { Avatar, Badge, Card, CardBody, CardHeader } from '@/components/ui/primitives'
 import { toastError } from './agents/helpers'
 
@@ -24,6 +24,18 @@ export default function SettingsPage() {
     onSuccess: (u) => {
       qc.setQueryData(['me'], u)
       toast.success('Profile updated')
+    },
+    onError: (e) => toastError(e),
+  })
+
+  const [currentPw, setCurrentPw] = useState('')
+  const [newPw, setNewPw] = useState('')
+  const setPassword = useMutation({
+    mutationFn: () => usersApi.setPassword(newPw, currentPw),
+    onSuccess: () => {
+      setCurrentPw('')
+      setNewPw('')
+      toast.success('Password updated')
     },
     onError: (e) => toastError(e),
   })
@@ -70,6 +82,41 @@ export default function SettingsPage() {
             </Field>
             <Field label="Email" hint="Contact an admin to change your email.">
               <Input value={user.email} readOnly className="max-w-sm" />
+            </Field>
+          </CardBody>
+        </Card>
+
+        <Card>
+          <CardHeader icon={<KeyRound />} title="Password" />
+          <CardBody className="space-y-4">
+            <p className="text-[13px] text-muted">
+              Set a password to sign in with your email as well as Google. Changing it signs out your other sessions.
+            </p>
+            <Field label="Current password" hint="Leave blank if you haven't set a password yet.">
+              <SecretInput
+                value={currentPw}
+                onChange={(e) => setCurrentPw(e.target.value)}
+                autoComplete="current-password"
+                className="max-w-sm"
+              />
+            </Field>
+            <Field label="New password" hint="At least 8 characters.">
+              <div className="flex gap-2">
+                <SecretInput
+                  value={newPw}
+                  onChange={(e) => setNewPw(e.target.value)}
+                  autoComplete="new-password"
+                  className="max-w-sm"
+                />
+                <Button
+                  variant="primary"
+                  disabled={newPw.length < 8}
+                  loading={setPassword.isPending}
+                  onClick={() => setPassword.mutate()}
+                >
+                  Save
+                </Button>
+              </div>
             </Field>
           </CardBody>
         </Card>

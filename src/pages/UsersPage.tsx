@@ -9,7 +9,7 @@ import { ROLE_DESCRIPTION, ROLE_LABEL } from '@/lib/permissions'
 import { formatDate, timeAgo } from '@/lib/utils'
 import { Page, PageHeader } from '@/components/layout/Page'
 import { Button } from '@/components/ui/button'
-import { Field, Input, SearchInput, Select } from '@/components/ui/input'
+import { Field, Input, SearchInput, SecretInput, Select } from '@/components/ui/input'
 import { Avatar, Badge, Card, EmptyState, ErrorState, Segmented } from '@/components/ui/primitives'
 import {
   Drawer,
@@ -89,7 +89,7 @@ export function CreateUserModal({
     queryFn: () => orgsApi.list({ limit: 200 }),
     enabled: open && isSuper && !fixedOrgId,
   })
-  const blank = { email: '', full_name: '', role: 'DEVELOPER' as OrgRole, organization_id: fixedOrgId ?? '' }
+  const blank = { email: '', full_name: '', password: '', role: 'DEVELOPER' as OrgRole, organization_id: fixedOrgId ?? '' }
   const [form, setForm] = useState(blank)
 
   const create = useMutation({
@@ -98,12 +98,13 @@ export function CreateUserModal({
         email: form.email.trim(),
         full_name: form.full_name.trim(),
         role: form.role,
+        password: form.password || null,
         organization_id: isSuper ? form.organization_id : null,
       }),
     onSuccess: (u) => {
       void qc.invalidateQueries({ queryKey: ['users'] })
       void qc.invalidateQueries({ queryKey: ['organizations'] })
-      toast.success('User created', { description: `${u.full_name} can now sign in with their Google account.` })
+      toast.success('User created', { description: `${u.full_name} can now sign in with Google${form.password ? ' or their password' : ''}.` })
       setForm(blank)
       onOpenChange(false)
     },
@@ -111,7 +112,10 @@ export function CreateUserModal({
   })
 
   const valid =
-    /\S+@\S+\.\S+/.test(form.email) && form.full_name.trim() && (!isSuper || form.organization_id)
+    /\S+@\S+\.\S+/.test(form.email) &&
+    form.full_name.trim() &&
+    (!form.password || form.password.length >= 8) &&
+    (!isSuper || form.organization_id)
 
   return (
     <Modal
@@ -138,6 +142,16 @@ export function CreateUserModal({
             <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
           </Field>
         </div>
+        <Field
+          label="Initial password (optional)"
+          hint="At least 8 characters. Leave blank for Google-only sign-in; share it securely and ask them to change it in Settings."
+        >
+          <SecretInput
+            value={form.password}
+            onChange={(e) => setForm({ ...form, password: e.target.value })}
+            autoComplete="new-password"
+          />
+        </Field>
         {isSuper && !fixedOrgId && (
           <Field label="Organization">
             <Select value={form.organization_id} onChange={(e) => setForm({ ...form, organization_id: e.target.value })}>
@@ -163,8 +177,10 @@ function EditUserDrawer({ target, onClose }: { target: UserOut | null; onClose: 
   const qc = useQueryClient()
   const [form, setForm] = useState({ full_name: '', role: 'DEVELOPER' as OrgRole, status: 'active' as UserStatus })
   const [lastId, setLastId] = useState<string | null>(null)
+  const [newPassword, setNewPassword] = useState('')
   if (target && target.id !== lastId) {
     setLastId(target.id)
+    setNewPassword('')
     setForm({
       full_name: target.full_name,
       role: target.role && target.role !== 'SUPER_ADMIN' ? target.role : 'DEVELOPER',
@@ -175,6 +191,12 @@ function EditUserDrawer({ target, onClose }: { target: UserOut | null; onClose: 
   // edits go through the organization's member list instead.
   const canEditRole = Boolean(target?.role) && !target?.is_super_admin
   const isSelf = target?.id === user?.id
+  // Super admins: anyone. Org admins: Developers and QA only.
+  const canSetPassword =
+    !isSelf &&
+    Boolean(target) &&
+    (Boolean(user?.is_super_admin) ||
+      (user?.role === 'ADMIN' && !target?.is_super_admin && (target?.role === 'DEVELOPER' || target?.role === 'QA')))
 
   const update = useMutation({
     mutationFn: () => {
@@ -190,6 +212,15 @@ function EditUserDrawer({ target, onClose }: { target: UserOut | null; onClose: 
       onClose()
     },
     onError: (e) => toastError(e, 'Could not update user'),
+  })
+
+  const resetPassword = useMutation({
+    mutationFn: () => usersApi.setUserPassword(target!.id, newPassword),
+    onSuccess: () => {
+      setNewPassword('')
+      toast.success('Password updated', { description: 'They have been signed out everywhere.' })
+    },
+    onError: (e) => toastError(e, 'Could not set password'),
   })
 
   const valid = form.full_name.trim()
@@ -246,6 +277,20 @@ function EditUserDrawer({ target, onClose }: { target: UserOut | null; onClose: 
               ]}
             />
           </Field>
+          {canSetPassword && (
+            <Field label="Set password" hint="Overwrites their password without needing the current one. At least 8 characters.">
+              <div className="flex gap-2">
+                <SecretInput value={newPassword} onChange={(e) => setNewPassword(e.target.value)} autoComplete="new-password" />
+                <Button
+                  disabled={newPassword.length < 8}
+                  loading={resetPassword.isPending}
+                  onClick={() => resetPassword.mutate()}
+                >
+                  Set
+                </Button>
+              </div>
+            </Field>
+          )}
         </div>
       )}
     </Drawer>

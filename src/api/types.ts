@@ -58,6 +58,7 @@ export interface UserCreate {
   email: string
   full_name: string
   role: OrgRole
+  password?: string | null
   organization_id?: string | null
 }
 

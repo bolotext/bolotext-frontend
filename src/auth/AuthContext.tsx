@@ -6,6 +6,8 @@ import type { Feature, MyOrganizationOut, OrganizationChoice, UserOut } from '@/
 import { ALL_FEATURES } from '@/lib/features'
 import { abilitiesFor, effectiveRole, type Abilities } from '@/lib/permissions'
 
+export type LoginCredentials = { google: string } | { email: string; password: string }
+
 type LoginResult = { ok: true } | { ok: false; organizations: OrganizationChoice[] }
 
 interface AuthState {
@@ -18,7 +20,7 @@ interface AuthState {
   hasFeature: (feature: Feature) => boolean
   organizations: MyOrganizationOut[]
   currentOrg: MyOrganizationOut | null
-  login: (credential: string, organizationId?: string) => Promise<LoginResult>
+  login: (credentials: LoginCredentials, organizationId?: string) => Promise<LoginResult>
   logout: () => Promise<void>
   switchOrganization: (organizationId: string) => Promise<void>
   refreshUser: () => Promise<unknown>
@@ -55,8 +57,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   )
 
   const login = useCallback(
-    async (credential: string, organizationId?: string): Promise<LoginResult> => {
-      const res = await authApi.login(credential, organizationId)
+    async (credentials: LoginCredentials, organizationId?: string): Promise<LoginResult> => {
+      const res =
+        'google' in credentials
+          ? await authApi.login(credentials.google, organizationId)
+          : await authApi.loginWithPassword(credentials.email, credentials.password, organizationId)
       if (!res.access_token || !res.refresh_token) {
         return { ok: false, organizations: res.organizations ?? [] }
       }

@@ -75,6 +75,12 @@ export const authApi = {
       body: { credential, organization_id: organization_id ?? null },
       auth: false,
     }),
+  loginWithPassword: (email: string, password: string, organization_id?: string) =>
+    request<LoginResponse>('/auth/login/password', {
+      method: 'POST',
+      body: { email, password, organization_id: organization_id ?? null },
+      auth: false,
+    }),
   logout: (refresh_token: string) => request<null>('/auth/logout', { method: 'POST', body: { refresh_token }, auth: false }),
   switchOrganization: (organization_id: string) => api.post<TokenResponse>('/auth/switch-organization', { organization_id }),
 }
@@ -89,6 +95,9 @@ export interface ListParams {
 export const usersApi = {
   me: () => api.get<UserOut>('/users/me'),
   updateMe: (body: UserSelfUpdate) => api.patch<UserOut>('/users/me', body),
+  setPassword: (new_password: string, current_password?: string) =>
+    api.put<null>('/users/me/password', { new_password, current_password: current_password || null }),
+  setUserPassword: (id: string, new_password: string) => api.put<null>(`/users/${id}/password`, { new_password }),
   myOrganizations: () => api.get<MyOrganizationOut[]>('/users/me/organizations'),
   list: (params: ListParams & { status?: UserStatus }) => api.get<UserOut[]>('/users', { ...params }),
   get: (id: string) => api.get<UserOut>(`/users/${id}`),

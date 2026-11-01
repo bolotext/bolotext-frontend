@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { ArrowLeft, ArrowRight, AudioLines, Building2, GitBranch, ShieldCheck } from 'lucide-react'
-import { useAuth } from '@/auth/AuthContext'
+import { useAuth, type LoginCredentials } from '@/auth/AuthContext'
 import type { OrganizationChoice } from '@/api/types'
 import { ROLE_LABEL } from '@/lib/permissions'
 import { errorMessage } from '@/lib/utils'
 import { Logo } from '@/components/layout/AppShell'
+import { Button } from '@/components/ui/button'
+import { Field, Input, SecretInput } from '@/components/ui/input'
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined
 const GSI_SRC = 'https://accounts.google.com/gsi/client'
@@ -22,14 +24,18 @@ export default function LoginPage() {
   const location = useLocation()
   const from = (location.state as { from?: string } | null)?.from ?? '/'
 
-  const [credential, setCredential] = useState<string | null>(null)
+  const [credentials, setCredentials] = useState<LoginCredentials | null>(null)
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const buttonRef = useRef<HTMLDivElement>(null)
   const [orgChoices, setOrgChoices] = useState<OrganizationChoice[] | null>(null)
   const [pendingOrg, setPendingOrg] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [forgotShown, setForgotShown] = useState(false)
 
-  const attempt = async (cred: string, orgId?: string) => {
+  const attempt = async (cred: LoginCredentials, orgId?: string) => {
+    setCredentials(cred)
     setBusy(true)
     setPendingOrg(orgId ?? null)
     setError(null)
@@ -59,8 +65,7 @@ export default function LoginPage() {
       gid.initialize({
         client_id: GOOGLE_CLIENT_ID,
         callback: (r) => {
-          setCredential(r.credential)
-          void attemptRef.current(r.credential)
+          void attemptRef.current({ google: r.credential })
         },
       })
       gid.renderButton(buttonRef.current, { theme: 'outline', size: 'large', text: 'signin_with', width: 320 })
@@ -79,6 +84,11 @@ export default function LoginPage() {
 
   if (user) return <Navigate to={from} replace />
 
+  const submitPassword = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (email.trim() && password) void attempt({ email: email.trim(), password })
+  }
+
   return (
     <div className="grid min-h-full lg:grid-cols-[1fr_1.05fr]">
       <div className="flex flex-col px-6 py-8 sm:px-12">
@@ -89,16 +99,61 @@ export default function LoginPage() {
               <h1 className="text-2xl font-semibold tracking-tight">Welcome back</h1>
               <p className="mt-1.5 text-[13px] text-muted">Sign in to build and manage your voice agents.</p>
               <div className="mt-8 space-y-4">
-                <div ref={buttonRef} className="flex justify-center" />
-                {busy && <div className="text-center text-[13px] text-muted">Signing in…</div>}
-                {(error || !GOOGLE_CLIENT_ID) && (
+                {GOOGLE_CLIENT_ID && (
+                  <>
+                    <div ref={buttonRef} className="flex justify-center" />
+                    <div className="flex items-center gap-3 text-xs text-subtle">
+                      <span className="h-px flex-1 bg-line" /> or <span className="h-px flex-1 bg-line" />
+                    </div>
+                  </>
+                )}
+                <form onSubmit={submitPassword} className="space-y-3">
+                  <Field label="Email" htmlFor="login-email">
+                    <Input
+                      id="login-email"
+                      type="email"
+                      autoComplete="username"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                    />
+                  </Field>
+                  <Field
+                    label="Password"
+                    htmlFor="login-password"
+                    aside={
+                      <button
+                        type="button"
+                        onClick={() => setForgotShown(true)}
+                        className="text-xs text-muted hover:text-fg"
+                      >
+                        Forgot password?
+                      </button>
+                    }
+                  >
+                    <SecretInput
+                      id="login-password"
+                      autoComplete="current-password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                    />
+                  </Field>
+                  <Button type="submit" variant="primary" className="w-full" loading={busy} disabled={!email.trim() || !password}>
+                    Sign in
+                  </Button>
+                </form>
+                {forgotShown && (
                   <div className="rounded-lg border border-danger/20 bg-danger-soft px-3 py-2 text-[13px] text-danger">
-                    {error ?? 'Google sign-in is not configured (missing VITE_GOOGLE_CLIENT_ID).'}
+                    Password reset isn't available here. Please contact your organization admin to set a new password, or sign
+                    in with Google.
                   </div>
+                )}
+                {error && (
+                  <div className="rounded-lg border border-danger/20 bg-danger-soft px-3 py-2 text-[13px] text-danger">{error}</div>
                 )}
               </div>
               <p className="mt-6 text-xs text-muted">
-                Sign in with the Google account your organization admin added. Contact them if you need access.
+                Use the email your organization admin added, with Google or a password you've set in Settings. Contact them if
+                you need access.
               </p>
             </>
           ) : (
@@ -120,7 +175,7 @@ export default function LoginPage() {
                     key={o.organization_id}
                     type="button"
                     disabled={busy}
-                    onClick={() => credential && attempt(credential, o.organization_id)}
+                    onClick={() => credentials && attempt(credentials, o.organization_id)}
                     className="flex w-full items-center gap-3 rounded-xl border border-line bg-surface p-3.5 text-left shadow-card transition-all hover:border-accent/50 hover:bg-surface-2 disabled:opacity-60"
                   >
                     <div className="flex size-9 items-center justify-center rounded-lg bg-accent-soft text-accent">
