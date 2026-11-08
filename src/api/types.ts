@@ -640,14 +640,24 @@ export interface JourneyItem {
   created_at?: number
   [key: string]: unknown
 }
-export interface CallLogInteraction {
-  details?: Record<string, unknown>
+/** The stored call-log document, as the voice runtime posted it. */
+export interface CallLogDocument {
+  conversation_id?: string | null
+  bot_id?: string | null
+  bot_type?: string | null
+  call_status?: string | null
+  callType?: string | null
+  callStartTime?: string | null
+  is_test?: boolean
+  environment?: string | null
+  duration?: string | null
+  hangup_reason?: Record<string, unknown> | null
   token_usage?: Record<string, number>
-  interaction_journey?: JourneyItem[]
+  conversation_log?: JourneyItem[]
   [key: string]: unknown
 }
 export interface CallLogOut extends CallLogSummary {
-  interaction: CallLogInteraction
+  log: CallLogDocument
 }
 
 /** LiveKit connection details for a browser voice call. Agent id, environment

@@ -261,11 +261,11 @@ function CallDetailModal({ agentId, call, onClose }: { agentId: string; call: Ca
 }
 
 function CallDetail({ c }: { c: CallLogOut }) {
-  const i = c.interaction
-  const journey = i.interaction_journey ?? []
+  const i = c.log
+  const journey = i.conversation_log ?? []
   const start = journey.reduce<number | undefined>((m, j) => (j.created_at !== undefined && (m === undefined || j.created_at < m) ? j.created_at : m), undefined)
   const usage = i.token_usage ?? {}
-  const hangup = i.details?.hangup_reason as Record<string, unknown> | undefined
+  const hangup = i.hangup_reason ?? undefined
   return (
     <div className="space-y-6">
       <dl className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-4">
@@ -346,7 +346,7 @@ function CallDetail({ c }: { c: CallLogOut }) {
       <details>
         <summary className="cursor-pointer text-[13px] font-medium text-muted">Raw stored data</summary>
         <pre className="mt-2 max-h-96 overflow-auto rounded-lg bg-surface-2 p-3 text-[11px] whitespace-pre-wrap">
-          {JSON.stringify({ ...i, interaction_journey: `${journey.length} items (shown above)`, hangup_reason: hangup }, null, 2)}
+          {JSON.stringify({ ...i, conversation_log: `${journey.length} items (shown above)`, hangup_reason: hangup }, null, 2)}
         </pre>
       </details>
     </div>
